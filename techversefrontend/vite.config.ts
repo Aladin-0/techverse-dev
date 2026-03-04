@@ -7,6 +7,40 @@ export default defineConfig({
   esbuild: {
     drop: ['console', 'debugger'],
   },
+  server: {
+    host: true,
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/admin': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/admin-panel': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/accounts': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/media': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/static': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      }
+    }
+  },
   build: {
     rollupOptions: {
       output: {

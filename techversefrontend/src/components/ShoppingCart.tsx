@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../stores/cartStore';
-import { API_BASE_URL } from '../api';
+import { API_BASE_URL, getImageUrl } from '../api';
 
 interface CartIconButtonProps {
   onClick: () => void;
@@ -229,11 +229,7 @@ export const ShoppingCart: React.FC = () => {
                     }}>
                       {item.product.image ? (
                         <img
-                          src={
-                            item.product.image.startsWith('http')
-                              ? item.product.image
-                              : `${API_BASE_URL}${item.product.image}`
-                          }
+                          src={getImageUrl(item.product.image)}
                           alt={item.product.name}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />

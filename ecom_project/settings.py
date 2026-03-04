@@ -13,13 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security settings from environment variables
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-jbx!=0@9n*(ptklw&c4y#as-yw3yzsd80d8vi9nv!rj+31^^mt')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '182.70.63.4',
-    'techverseservices.in',
-    'www.techverseservices.in',
-]
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,182.70.63.4,techverseservices.in,www.techverseservices.in,backend').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -34,6 +28,7 @@ INSTALLED_APPS = [
     'store',
     'services',
     'admin_panel',
+    'payments',
     
     # Third-party Apps
     'rest_framework',

@@ -20,43 +20,61 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: backend
-    command: gunicorn ecom_project.wsgi:application --bind 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
+      - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     env_file:
       - .env
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
     restart: always
 
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    container_name: nginx
-    restart: always
+  frontend:
+    image: node:20-alpine
+    container_name: frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./techversefrontend:/app
+      - /app/node_modules
     ports:
-      - "8081:80"
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
     depends_on:
       - backend
+    restart: always
 
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+# Commenting out production configuration to speed up development
+#  nginx:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.nginx
+#    container_name: nginx
+#    restart: always
+#    volumes:
+#      - static_volume:/app/staticfiles
+#      - media_volume:/app/media
+#      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+#      - ./certbot/conf:/etc/letsencrypt
+#      - ./certbot/www:/var/www/certbot
+#    ports:
+#      - "8081:80"
+#    depends_on:
+#      - backend
+#
+#  certbot:
+#    image: certbot/certbot
+#    container_name: certbot
+#    volumes:
+#      - ./certbot/conf:/etc/letsencrypt
+#      - ./certbot/www:/var/www/certbot
+#    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
   static_volume:

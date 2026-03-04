@@ -43,6 +43,7 @@ urlpatterns = [
     # App URLs
     path('', include('store.urls')),
     path('api/users/', include('users.urls')),
+    path('api/payments/', include('payments.urls')),
 ]
 
 # Override admin index view

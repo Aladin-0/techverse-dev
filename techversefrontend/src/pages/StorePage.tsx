@@ -25,7 +25,7 @@ import { useSpring, animated, useTrail } from '@react-spring/web';
 import { useProductStore } from '../stores/productStore';
 import { useCartStore } from '../stores/cartStore';
 import { useSnackbar } from 'notistack';
-import { API_BASE_URL } from '../api';
+import { API_BASE_URL, getImageUrl } from '../api';
 
 const PageWrapper = styled(Box)({
   backgroundColor: '#000000',
@@ -33,7 +33,7 @@ const PageWrapper = styled(Box)({
   fontFamily: "'Segoe UI', 'Roboto', sans-serif",
   minHeight: '100vh',
   width: '100%',
-  overflow: 'hidden',
+  overflowX: 'hidden',
 });
 
 const Header = styled(Box)({
@@ -690,7 +690,8 @@ const Footer = styled(Box)({
   '@media (max-width: 768px)': {
     flexDirection: 'column',
     gap: '24px',
-    padding: '32px 40px',
+    padding: '32px 24px',
+    paddingBottom: '120px', // Explicit bottom padding for mobile dock
   },
 });
 
@@ -991,7 +992,7 @@ export const StorePage: React.FC = () => {
               <ProductCard key={product.id}>
                 <ProductImageArea onClick={() => handleViewDetails(product)}>
                   <img
-                    src={product.image ? (product.image.startsWith('http') ? product.image : `${API_BASE_URL}${product.image}`) : `https://via.placeholder.com/300x300/333333/ffffff?text=${encodeURIComponent(product.name)}`}
+                    src={product.image ? getImageUrl(product.image) : `https://via.placeholder.com/300x300/333333/ffffff?text=${encodeURIComponent(product.name)}`}
                     alt={product.name}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;

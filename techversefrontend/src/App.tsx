@@ -11,6 +11,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 // Default exports
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const PaymentRedirectPage = lazy(() => import('./pages/PaymentRedirectPage'));
 
 // Named exports (need adapter)
 const StorePage = lazy(() => import('./pages/StorePage').then(module => ({ default: module.StorePage })));
@@ -210,6 +211,14 @@ function App() {
               element={
                 <CustomerRoute>
                   <CheckoutPage />
+                </CustomerRoute>
+              }
+            />
+            <Route
+              path="/payment-redirect/:transactionId"
+              element={
+                <CustomerRoute>
+                  <PaymentRedirectPage />
                 </CustomerRoute>
               }
             />

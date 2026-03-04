@@ -27,7 +27,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { styled } from '@mui/material/styles';
-import apiClient, { API_BASE_URL } from '../api';
+import apiClient, { API_BASE_URL, getImageUrl } from '../api';
 
 // Styled components matching your design system
 const PageWrapper = styled(Box)(({ theme }) => ({
@@ -334,11 +334,20 @@ const CheckoutPage: React.FC = () => {
       };
 
       const response = await apiClient.post('/api/orders/create-bulk/', payload);
+      const orderId = response.data.id;
 
-      // The API returns the created order object
-      setOrderIds([response.data.id]);
-      clearCart();
-      setOrderSuccess(true);
+      // Initiate PhonePe Payment
+      const paymentResponse = await apiClient.post('/api/payments/initiate/', {
+        order_id: orderId
+      });
+
+      if (paymentResponse.data.redirect_url) {
+        // Clear cart before redirecting so user doesn't buy again
+        clearCart();
+        window.location.href = paymentResponse.data.redirect_url;
+      } else {
+        throw new Error('Invalid payment response');
+      }
 
     } catch (error) {
       console.error('Order creation failed:', error);
@@ -538,7 +547,7 @@ const CheckoutPage: React.FC = () => {
                       }}>
                         {item.product.image ? (
                           <img
-                            src={item.product.image.startsWith('http') ? item.product.image : `${API_BASE_URL}${item.product.image}`}
+                            src={getImageUrl(item.product.image)}
                             alt={item.product.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />

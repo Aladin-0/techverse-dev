@@ -17,6 +17,10 @@ const FooterWrapper = styled(Box)({
   position: 'relative',
   overflow: 'hidden',
   marginTop: '60px',
+  paddingBottom: '0',
+  '@media (max-width:900px)': {
+    paddingBottom: '100px', // Gives enough extra space so the dock sits seamlessly above footer text
+  },
   '&::before': {
     content: '""',
     position: 'absolute',

@@ -2,7 +2,22 @@
 import axios from 'axios';
 
 // Helper to get API URL from env
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// In production (built static files served by nginx), use relative URLs — nginx
+// proxies /api/, /auth/, /media/ etc to the backend container automatically.
+// In local dev (Vite dev server), use the env var or fall back to localhost.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+export const getImageUrl = (imagePath: string | null | undefined): string => {
+    if (!imagePath) return '';
+    // If the backend returns an absolute URL with the Docker internal host, strip it 
+    // so the Vite proxy can handle it correctly relative to the frontend.
+    if (imagePath.startsWith('http://backend:8000')) {
+        return imagePath.replace('http://backend:8000', '');
+    }
+    // If it's another absolute URL (like S3 or external), return it as is.
+    // Otherwise, prepend the API_BASE_URL for correct resolution.
+    return imagePath.startsWith('http') ? imagePath : `${API_BASE_URL}${imagePath}`;
+};
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -40,7 +55,7 @@ apiClient.interceptors.request.use(async (config) => {
     // Attach CSRF token for unsafe methods
     const method = (config.method || 'get').toUpperCase();
     const unsafe = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
-    
+
     if (unsafe) {
         // Fetch fresh CSRF token for each unsafe request
         const csrfToken = await fetchCSRFToken();
@@ -48,7 +63,7 @@ apiClient.interceptors.request.use(async (config) => {
             config.headers['X-CSRFToken'] = csrfToken;
         }
     }
-    
+
     return config;
 });
 

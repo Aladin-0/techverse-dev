@@ -464,12 +464,25 @@ export const ServiceRequestPage: React.FC = () => {
       };
 
       const response = await apiClient.post('/api/requests/create/', requestData);
+      const serviceRequestId = response.data.id;
 
+      if (category?.is_free_for_user) {
+        enqueueSnackbar('Service request submitted successfully!', { variant: 'success' });
+        navigate('/services', {
+          state: { message: 'Service request submitted successfully! We will contact you within 24 hours.' }
+        });
+      } else {
+        // Initiate PhonePe Payment
+        const paymentResponse = await apiClient.post('/api/payments/initiate/', {
+          service_request_id: serviceRequestId
+        });
 
-      enqueueSnackbar('Service request submitted successfully!', { variant: 'success' });
-      navigate('/services', {
-        state: { message: 'Service request submitted successfully! We will contact you within 24 hours.' }
-      });
+        if (paymentResponse.data.redirect_url) {
+          window.location.href = paymentResponse.data.redirect_url;
+        } else {
+          throw new Error('Invalid payment response');
+        }
+      }
 
     } catch (error) {
       console.error('Failed to submit service request:', error);

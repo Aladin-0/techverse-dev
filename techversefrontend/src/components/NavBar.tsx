@@ -181,7 +181,7 @@ export const NavBar = () => {
 
   return (
     <>
-      <StyledAppBar className={scrolled ? 'scrolled' : ''}>
+      <StyledAppBar position="fixed" className={scrolled ? 'scrolled' : ''}>
         <Toolbar sx={{
           py: { xs: 0, md: 1.5 },
           minHeight: { xs: '56px', md: '64px' }
@@ -190,7 +190,7 @@ export const NavBar = () => {
             <RouterLink to="/" style={{ textDecoration: 'none' }} onClick={() => cleanNavigate('/')}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <img src={logoImage} alt="Logo" style={{ width: '42px', height: '42px' }} />
-                <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.5, color: 'white', display: { xs: 'none', sm: 'block' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.5, color: 'white', display: { xs: 'none', md: 'block' } }}>
                   TECHVERSE
                 </Typography>
               </Box>
@@ -327,8 +327,6 @@ export const NavBar = () => {
       </Menu>
 
       <ShoppingCart />
-      {/* Spacer to prevent dock from covering bottom content */}
-      <Box sx={{ display: { xs: 'block', md: 'none' }, height: '120px' }} />
     </>
   );
 };
