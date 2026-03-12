@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
+import ErrorBoundary from './ErrorBoundary';
 import './index.css';
 import './App.css';
 import { BrowserRouter } from 'react-router-dom';
@@ -10,7 +11,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { SnackbarProvider } from 'notistack';
 
 // ✅ CHECK BEFORE REACT LOADS - This runs FIRST
-const backendPaths = ['/admin-panel/', '/api/', '/accounts/', '/auth/'];
+const backendPaths = ['/admin-panel/', '/api/', '/accounts/'];
 const currentPath = window.location.pathname;
 
 if (backendPaths.some(path => currentPath.startsWith(path))) {
@@ -30,7 +31,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ThemeProvider theme={darkTheme}>
         <SnackbarProvider>
           <CssBaseline />
-          <App />
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
         </SnackbarProvider>
       </ThemeProvider>
     </BrowserRouter>

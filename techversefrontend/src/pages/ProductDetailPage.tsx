@@ -1,3 +1,4 @@
+import { useSpring, animated, config } from "@react-spring/web";
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
@@ -22,7 +23,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 
-import { useSpring, animated, config } from '@react-spring/web';
+
 import { useCartStore } from '../stores/cartStore';
 import { useSnackbar } from 'notistack';
 import apiClient, { API_BASE_URL, getImageUrl } from '../api';
@@ -516,32 +517,13 @@ export const ProductDetailPage: React.FC = () => {
   const addToCart = useCartStore((state) => state.addToCart);
 
   // Animations
-  const fadeIn = useSpring({
-    from: { opacity: 0, transform: 'translateY(30px)' },
-    to: { opacity: 1, transform: 'translateY(0)' },
-    config: config.gentle,
-  });
+  const fadeIn = {};
 
-  const slideLeft = useSpring({
-    from: { opacity: 0, transform: 'translateX(-40px)' },
-    to: { opacity: 1, transform: 'translateX(0)' },
-    config: config.gentle,
-    delay: 100,
-  });
+  const slideLeft = {};
 
-  const slideRight = useSpring({
-    from: { opacity: 0, transform: 'translateX(40px)' },
-    to: { opacity: 1, transform: 'translateX(0)' },
-    config: config.gentle,
-    delay: 200,
-  });
+  const slideRight = {};
 
-  const cardsMount = useSpring({
-    from: { opacity: 0, transform: 'translateY(40px)' },
-    to: { opacity: 1, transform: 'translateY(0)' },
-    config: config.gentle,
-    delay: 300,
-  });
+  const cardsMount = {};
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -624,15 +606,15 @@ export const ProductDetailPage: React.FC = () => {
   return (
     <PageWrapper>
       <ContentContainer>
-        <animated.div style={fadeIn}>
+        <div style={fadeIn}>
           <FloatingBackButton onClick={() => navigate('/store')} startIcon={<ArrowBackIcon />}>
             Store
           </FloatingBackButton>
-        </animated.div>
+        </div>
 
         <HeroGrid>
           {/* Left Column: Images */}
-          <animated.div style={slideLeft}>
+          <div style={slideLeft}>
             <ImageShowcase>
               <StyledProductImage
                 src={getImageUrl(currentImage)}
@@ -660,10 +642,10 @@ export const ProductDetailPage: React.FC = () => {
                 ))}
               </ThumbnailGrid>
             )}
-          </animated.div>
+          </div>
 
           {/* Right Column: Key Info */}
-          <animated.div style={slideRight}>
+          <div style={slideRight}>
             <InfoPanel>
               <GlowingBadge>
                 {product.category.name}
@@ -704,10 +686,10 @@ export const ProductDetailPage: React.FC = () => {
                 </PrimaryButton>
               </ActionButtonGroup>
             </InfoPanel>
-          </animated.div>
+          </div>
         </HeroGrid>
 
-        <animated.div style={cardsMount}>
+        <div style={cardsMount}>
           {/* Top details section: Overview Grid */}
           <GlassCard sx={{ mb: '60px' }}>
             <CardHeader variant="h2">
@@ -841,7 +823,7 @@ export const ProductDetailPage: React.FC = () => {
               </Box>
             </GlassCard>
           </SectionGrid>
-        </animated.div>
+        </div>
       </ContentContainer>
     </PageWrapper>
   );
