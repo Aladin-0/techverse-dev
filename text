@@ -1,0 +1,61 @@
+# ─── ENVIRONMENT MODE ─────────────────────────────────────────────────────────
+# Set to "True" for local development, "False" for production server
+DEBUG=True
+
+# ─── TIMEZONE ─────────────────────────────────────────────────────────────────
+TIME_ZONE=Asia/Kolkata
+VITE_APP_TIMEZONE=Asia/Kolkata
+
+# ─── DOMAIN / URLs ────────────────────────────────────────────────────────────
+DOMAIN_NAME=localhost
+
+# DEV:   FRONTEND_BASE_URL=http://localhost:5173
+# PROD:  FRONTEND_BASE_URL=https://techverseservices.in
+FRONTEND_BASE_URL=http://localhost:5173
+
+# Empty implies default dynamic configuration in frontend build
+VITE_API_BASE_URL=
+
+# ─── MEDIA & STATIC FILES ─────────────────────────────────────────────────────
+# Configure exactly where User Uploads and Server Static Assets read from.
+# Default configurations are relative to the docker volume directories.
+STATIC_URL=static/
+STATIC_ROOT=/app/staticfiles
+
+MEDIA_URL=/media/
+MEDIA_ROOT=/app/media
+
+# ─── DJANGO BACKEND SECURITY ──────────────────────────────────────────────────
+SECRET_KEY=nt=9n5%=*-(7it!@xmdewa)y!c_eeim49v&w3i(prav13i13%5
+
+# A comma-separated list of allowed host/domain names
+ALLOWED_HOSTS=localhost,127.0.0.1,backend
+
+# A comma-separated list of origins authorized to make cross-site HTTP requests
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
+
+# A comma-separated list of trusted origins for CSRF cookies
+CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:8000,http://127.0.0.1:8000
+
+# ─── DATABASE ─────────────────────────────────────────────────────────────────
+DB_NAME=techverse_db
+DB_USER=techverse_user
+DB_PASSWORD=techverse@123
+DB_HOST=db
+DB_PORT=5432
+
+# ─── GOOGLE OAUTH ─────────────────────────────────────────────────────────────
+GOOGLE_CLIENT_ID=367733174475-54dfrrgrelc1gf004vbtj0e6kbqmq4uj.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+
+# ─── PHONEPE PAYMENT GATEWAY ──────────────────────────────────────────────────
+PHONEPE_CLIENT_ID=SU2602161652008691948618
+PHONEPE_CLIENT_SECRET=9f4234b9-d032-4c90-a2a8-a939421af63a
+PHONEPE_CLIENT_VERSION=1
+PHONEPE_ENV=PROD
+
+# ─── GEMINI AI CHATBOT ────────────────────────────────────────────────────────
+GEMINI_API_KEY=AIzaSyALMEeWUJIiex_SUtdIgtA_UYv2ZJVKHDk
+
+# ─── DOCKER SERVER COMMAND ────────────────────────────────────────────────────
+BACKEND_COMMAND=python manage.py runserver 0.0.0.0:8000
