@@ -40,7 +40,7 @@ class ErrorBoundary extends React.Component<any, any> {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter basename="/admin">
         <ToastProvider>
           <App />
         </ToastProvider>

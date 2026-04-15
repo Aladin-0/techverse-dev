@@ -4,6 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   envDir: path.resolve(__dirname, '..'),
+  base: '/admin/',   // serve under /admin/ on port 443
   plugins: [react()],
   resolve: {
     alias: {
