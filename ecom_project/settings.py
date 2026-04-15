@@ -11,7 +11,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security settings from environment variables
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-jbx!=0@9n*(ptklw&c4y#as-yw3yzsd80d8vi9nv!rj+31^^mt')
+# SECURITY: Do NOT add a fallback here. If SECRET_KEY is missing, the app must crash loudly.
+SECRET_KEY = os.environ['SECRET_KEY']
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,182.70.63.4,techverseservices.in,www.techverseservices.in,backend').split(',')
 
@@ -34,6 +35,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # SECURITY: enables JWT token invalidation
     'dj_rest_auth',
     'dj_rest_auth.registration',
     'corsheaders',
@@ -120,7 +122,7 @@ ACCOUNT_LOGIN_METHODS = {'email'}  # replaces ACCOUNT_AUTHENTICATION_METHOD
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']  # replaces ACCOUNT_EMAIL_REQUIRED / ACCOUNT_USERNAME_REQUIRED
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
-ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_LOGOUT_ON_GET = False       # SECURITY: force POST-only logout to prevent CSRF-based logout
 
 # Keep deprecated ones for backwards compat with older dj-rest-auth serializers
 ACCOUNT_EMAIL_REQUIRED = True
@@ -173,8 +175,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10000/day',
-        'user': '100000/day'
+        'anon': '200/day',        # Tightened from 10,000 — prevents scraping & abuse
+        'user': '2000/day'        # Tightened from 100,000
     }
 }
 
@@ -186,10 +188,10 @@ REST_AUTH = {
 
 # ============= SIMPLE JWT SETTINGS =============
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Reduced from 60min for better security
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    'BLACKLIST_AFTER_ROTATION': True,   # SECURITY: invalidate old refresh tokens on rotation
     'UPDATE_LAST_LOGIN': True,
 }
 
@@ -233,18 +235,18 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     
-    # SSL Redirect
-    SECURE_SSL_REDIRECT = True
-    
+    # SSL Redirect — set False because Nginx handles SSL termination
+    # Django sees plain HTTP from Nginx internally; Nginx enforces HTTPS externally
+    SECURE_SSL_REDIRECT = False
+
     # Cookie Security
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    
+
     # Browser Security Headers
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
     X_FRAME_OPTIONS = 'DENY'
-    SECURE_SSL_REDIRECT = False
 
     # Proxy SSL Header
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -282,3 +284,62 @@ CSRF_COOKIE_HTTPONLY = False  # Allow JS to read the cookie
 # This tells dj-rest-auth what URL to embed in the password-reset email.
 # The React page /reset-password reads uid and token from query params.
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:5173')
+
+# ============= LOGGING =============
+import os as _os
+_LOG_DIR = _os.path.join(BASE_DIR, 'logs')
+_os.makedirs(_LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file_error': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': _os.path.join(_LOG_DIR, 'django_errors.log'),
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'level': 'ERROR',
+        },
+        'file_general': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': _os.path.join(_LOG_DIR, 'django.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 3,
+            'formatter': 'verbose',
+            'level': 'WARNING',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file_error', 'file_general'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file_error'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'store': {
+            'handlers': ['console', 'file_error'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users': {
+            'handlers': ['console', 'file_error'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

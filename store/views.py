@@ -15,6 +15,9 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
+import logging
+
+logger = logging.getLogger(__name__)
 import os
 from services.models import ServiceRequest
 from django.db import transaction
@@ -364,7 +367,8 @@ def create_order(request):
         return Response(serializer.data, status=201)
 
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        logger.exception("Error in create_order")
+        return Response({'error': 'An unexpected error occurred. Please try again.'}, status=500)
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
@@ -431,7 +435,8 @@ def create_bulk_order(request):
         return Response(serializer.data, status=201)
 
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        logger.exception("Error in create_bulk_order")
+        return Response({'error': 'An unexpected error occurred. Please try again.'}, status=500)
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
@@ -457,7 +462,8 @@ def cancel_order(request, order_id):
         return Response(serializer.data)
 
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        logger.exception("Error in cancel_order")
+        return Response({'error': 'An unexpected error occurred. Please try again.'}, status=500)
 
 @staff_member_required
 @require_http_methods(["POST"])
@@ -480,7 +486,8 @@ def delete_product_image(request, image_id):
     except ProductImage.DoesNotExist:
         return JsonResponse({'error': 'Image not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.exception("Error deleting product image")
+        return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
 
 @api_view(['POST', 'DELETE'])
 @permission_classes([permissions.IsAdminUser])
@@ -506,7 +513,8 @@ def delete_product(request, product_id):
     except Product.DoesNotExist:
         return Response({'error': 'Product not found'}, status=404)
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        logger.exception("Error in delete_product")
+        return Response({'error': 'An unexpected error occurred.'}, status=500)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -699,7 +707,8 @@ def chatbot_query(request):
         error_str = str(e)
         if '429' in error_str or 'QUOTA' in error_str.upper() or 'EXHAUSTED' in error_str.upper():
             return Response({'reply': "I'm a bit busy right now due to high traffic. Please try again in a few minutes!"})
-        return Response({'error': error_str}, status=500)
+        logger.exception("Chatbot error")
+        return Response({'error': 'AI service temporarily unavailable.'}, status=500)
 
 
 class StoreBannerListAPIView(APIView):
