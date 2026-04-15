@@ -1,99 +1,122 @@
-/* src/index.css - FINAL VERSION THAT WILL WORK */
+/* index.css — Premium TechVerse Design System */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Import Nevera font */
-@font-face {
-  font-family: 'Nevera';
-  src: url('/fonts/Nevera-Regular.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Import Inter for body text */
-/* Google Fonts loaded in index.html for performance */
+/* Inter loaded from index.html */
 
 * {
   box-sizing: border-box;
-}
-
-body {
   margin: 0;
-  background-color: #0a0a0a;
-  color: #ffffff;
-  font-family: 'Inter', sans-serif; /* Default to Inter */
+  padding: 0;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-body, html {
-  text-rendering: optimizeLegibility;
+body {
+  background-color: #FAF9F5;
+  color: #1A1814;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* CRITICAL: Override ALL headings and hero elements with Nevera */
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Nevera', sans-serif !important;
-  letter-spacing: 0.12em !important;
-  font-weight: 400 !important;
-}
-
+/* Refined heading hierarchy — not everything needs to be 900 */
 h1 {
-  letter-spacing: 0.15em !important;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.0;
+}
+h2 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+h3, h4, h5, h6 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
-/* Target styled-components classes specifically */
-[class*="HeroTitle"] * {
-  font-family: 'Nevera', sans-serif !important;
-  letter-spacing: 0.15em !important;
-  font-weight: 400 !important;
-}
-
-[class*="HeroSubtitle"] * {
-  font-family: 'Nevera', sans-serif !important;
-  letter-spacing: 0.08em !important;
-  font-weight: 400 !important;
-  text-transform: uppercase !important;
-}
-
-[class*="SectionTitle"] * {
-  font-family: 'Nevera', sans-serif !important;
-  letter-spacing: 0.12em !important;
-  font-weight: 400 !important;
-}
-
-/* Override MUI Typography when used in Hero/Section components */
-[class*="HeroTitle"] .MuiTypography-root,
-[class*="HeroSubtitle"] .MuiTypography-root,
-[class*="SectionTitle"] .MuiTypography-root {
-  font-family: 'Nevera', sans-serif !important;
-}
-
-/* Buttons */
 button {
-  font-family: 'Nevera', sans-serif !important;
-  letter-spacing: 0.12em !important;
-  font-weight: 400 !important;
-  text-transform: uppercase !important;
+  font-family: 'Inter', sans-serif;
 }
 
-/* Logo */
-[class*="Logo"] {
-  font-family: 'Nevera', sans-serif !important;
-  letter-spacing: 0.15em !important;
-}
-
-/* Navigation stays Inter */
-nav * {
-  font-family: 'Inter', sans-serif !important;
-  font-weight: 500 !important;
-}
-
-/* Regular paragraphs stay Inter */
 p {
   font-family: 'Inter', sans-serif;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.65;
 }
+
+/* Premium selection color */
+::selection {
+  background: rgba(28,43,74,0.12);
+  color: #1A1814;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(28,43,74,0.15);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(28,43,74,0.3);
+}
+
+/* Global animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Utility classes for reveal animations */
+.reveal-up {
+  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.reveal-up-delay-1 { animation-delay: 0.1s; }
+.reveal-up-delay-2 { animation-delay: 0.2s; }
+.reveal-up-delay-3 { animation-delay: 0.3s; }

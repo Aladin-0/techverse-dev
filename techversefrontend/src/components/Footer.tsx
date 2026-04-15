@@ -1,318 +1,466 @@
-// src/components/Footer.tsx
-import React from 'react';
-import { styled } from '@mui/material/styles';
-import { Box, Typography, Grid, IconButton } from '@mui/material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FacebookIcon from '@mui/icons-material/Facebook';
-import TwitterIcon from '@mui/icons-material/Twitter';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import InstagramIcon from '@mui/icons-material/Instagram';
-import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 
-const FooterWrapper = styled(Box)({
-  background: 'linear-gradient(135deg, #0a0a0a 0%, #000000 100%)',
-  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-  position: 'relative',
-  overflow: 'hidden',
-  marginTop: '60px',
-  paddingBottom: '0',
-  '@media (max-width:900px)': {
-    paddingBottom: '100px', // Gives enough extra space so the dock sits seamlessly above footer text
+/* ── Site palette (matches navbar & rest of website) ── */
+const BG      = '#1C2B4A';
+const SURFACE = 'rgba(255,255,255,0.05)';
+const BORDER  = 'rgba(255,255,255,0.08)';
+const AMBER   = '#D4922A';
+const AMBER_L = '#E8A845';
+const TEXT    = 'rgba(255,255,255,0.9)';
+const MUTED   = 'rgba(255,255,255,0.5)';
+const DIM     = 'rgba(255,255,255,0.25)';
+
+const NAV = [
+  {
+    heading: 'Products',
+    items: [
+      { label: 'Laptops & Computers',     path: '/store?category=laptops-computers' },
+      { label: 'Smartphones & Tablets',   path: '/store?category=smartphones' },
+      { label: 'Monitors & Displays',     path: '/store?category=monitors' },
+      { label: 'Audio & Headphones',      path: '/store?category=audio' },
+      { label: 'Keyboards & Peripherals', path: '/store?category=peripherals' },
+      { label: 'View All Products',       path: '/store' },
+    ],
   },
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '1px',
-    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
-  }
-});
-
-const FooterTop = styled(Box)({
-  padding: '50px 55px 35px',
-  maxWidth: '1400px',
-  margin: '0 auto',
-  '@media (max-width:900px)': {
-    padding: '40px 24px 30px',
+  {
+    heading: 'Services',
+    items: [
+      { label: 'Laptop Repair',     path: '/services' },
+      { label: 'Smartphone Repair', path: '/services' },
+      { label: 'Data Recovery',     path: '/services' },
+      { label: 'Networking Setup',  path: '/services' },
+      { label: 'CCTV & Security',   path: '/services' },
+      { label: 'Smart Home Setup',  path: '/services' },
+    ],
   },
-});
-
-const FooterBottom = styled(Box)({
-  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-  padding: '20px 55px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  maxWidth: '1400px',
-  margin: '0 auto',
-  '@media (max-width:900px)': {
-    flexDirection: 'column',
-    gap: '16px',
-    padding: '20px 24px',
-    textAlign: 'center',
+  {
+    heading: 'Account',
+    items: [
+      { label: 'My Orders',       path: '/my-orders' },
+      { label: 'Service History', path: '/service-history' },
+      { label: 'Profile',         path: '/profile' },
+      { label: 'Track Repair',    path: '/service-history' },
+    ],
   },
-});
-
-const FooterBrand = styled(Box)({
-  marginBottom: '18px',
-});
-
-const BrandLogo = styled(Typography)({
-  fontSize: '18px',
-  fontWeight: 700,
-  letterSpacing: '1.2px',
-  color: '#ffffff',
-  marginBottom: '10px',
-  background: 'linear-gradient(135deg, #ffffff, #a0a0a0)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-});
-
-const BrandTagline = styled(Typography)({
-  fontSize: '13px',
-  color: 'rgba(255, 255, 255, 0.45)',
-  lineHeight: 1.5,
-  maxWidth: '280px',
-  fontWeight: 400,
-  letterSpacing: '0.2px',
-});
-
-const FooterSection = styled(Box)({
-  '& h4': {
-    fontSize: '14px',
-    fontWeight: 700,
-    marginBottom: '18px',
-    color: 'rgba(255, 255, 255, 0.9)',
-    letterSpacing: '0.4px',
-    position: 'relative',
-    paddingBottom: '10px',
-    '&::after': {
-      content: '""',
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      width: '30px',
-      height: '2px',
-      background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.5), transparent)',
-    }
+  {
+    heading: 'Legal',
+    items: [
+      { label: 'Privacy Policy',     path: '/privacy-policy' },
+      { label: 'Terms & Conditions', path: '/terms-conditions' },
+      { label: 'Refund Policy',      path: '/refund-policy' },
+      { label: 'Return Policy',      path: '/return-policy' },
+      { label: 'Shipping Policy',    path: '/shipping-policy' },
+    ],
   },
-});
+];
 
-const FooterLink = styled('a')({
-  display: 'block',
-  color: 'rgba(255, 255, 255, 0.45)',
-  textDecoration: 'none',
-  fontSize: '13px',
-  marginBottom: '10px',
-  transition: 'all 0.3s ease',
-  fontWeight: 400,
-  letterSpacing: '0.2px',
-  cursor: 'pointer',
-  '&:hover': {
-    color: 'rgba(255, 255, 255, 0.85)',
-    transform: 'translateX(3px)',
-  },
-});
+const TRUST = [
+  { icon: '🔒', label: 'Secure Payments' },
+  { icon: '📦', label: 'Fast Delivery' },
+  { icon: '🛡', label: '1-Year Warranty' },
+  { icon: '🔧', label: 'Expert Repairs' },
+];
 
-const ContactItem = styled('a')({
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: '10px',
-  marginBottom: '12px',
-  color: 'rgba(255, 255, 255, 0.45)',
-  fontSize: '13px',
-  transition: 'all 0.3s ease',
-  textDecoration: 'none',
-  cursor: 'pointer',
-  '&:hover': {
-    color: 'rgba(255, 255, 255, 0.75)',
-  },
-  '& svg': {
-    fontSize: '16px',
-    marginTop: '2px',
-    flexShrink: 0,
-  },
-});
+// Instagram gradient icon as SVG (proper colors)
+const InstagramIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5"/>
+    <circle cx="12" cy="12" r="4"/>
+    <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+  </svg>
+);
 
-const SocialIconsBox = styled(Box)({
-  display: 'flex',
-  gap: '10px',
-  marginTop: '16px',
-});
+const EmailIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2"/>
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+  </svg>
+);
 
-const SocialIconBtn = styled(IconButton)({
-  width: '36px',
-  height: '36px',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '50%',
-  color: 'rgba(255, 255, 255, 0.45)',
-  transition: 'all 0.3s ease',
-  background: 'rgba(255, 255, 255, 0.02)',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.08)',
-    color: 'rgba(255, 255, 255, 0.85)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    transform: 'translateY(-2px)',
-  },
-});
-
-const CopyrightText = styled(Typography)({
-  fontSize: '12px',
-  color: 'rgba(255, 255, 255, 0.35)',
-  fontWeight: 400,
-  letterSpacing: '0.2px',
-});
-
-const PaymentIcons = styled(Box)({
-  display: 'flex',
-  gap: '10px',
-  alignItems: 'center',
-  '@media (max-width:900px)': {
-    justifyContent: 'center',
-  },
-});
-
-const PaymentIcon = styled(Box)({
-  width: '42px',
-  height: '28px',
-  background: 'rgba(255, 255, 255, 0.06)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  borderRadius: '5px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '9px',
-  color: 'rgba(255, 255, 255, 0.45)',
-  fontWeight: 600,
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-});
+const PhoneIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.9a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+  </svg>
+);
 
 export const Footer: React.FC = () => {
   const navigate = useNavigate();
+  const [email, setEmail]     = useState('');
+  const [subDone, setSubDone] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+
+  const subscribe = () => {
+    if (email.includes('@')) { setSubDone(true); setEmail(''); }
+  };
+
+  const navLink = (label: string, path: string) => (
+    <button key={label} onClick={() => navigate(path)} style={{
+      background: 'none', border: 'none', padding: '4px 0',
+      color: MUTED, cursor: 'pointer', fontSize: 13,
+      fontWeight: 400, fontFamily: "'Inter', sans-serif",
+      letterSpacing: '-0.01em', textAlign: 'left',
+      lineHeight: 1.7, display: 'block', width: '100%',
+      transition: 'color 0.15s',
+    }}
+      onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+      onMouseLeave={e => (e.currentTarget.style.color = MUTED)}
+    >
+      {label}
+    </button>
+  );
+
+  // ════════════ MOBILE FOOTER VIEW ════════════
+  if (isMobile) {
+    return (
+      <footer style={{ background: BG, fontFamily: "'Inter', sans-serif", borderTop: `1px solid ${BORDER}`, paddingBottom: 20 }}>
+        <div style={{ padding: '24px 16px 0' }}>
+
+          {/* Top Block: Logo & Newsletter */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: `linear-gradient(135deg, ${AMBER}, ${AMBER_L})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: '#fff', fontSize: 14, fontWeight: 900, lineHeight: 1 }}>T</span>
+              </div>
+              <span style={{ fontSize: 18, fontWeight: 800, color: TEXT, letterSpacing: '-0.04em' }}>
+                Tech<span style={{ color: AMBER }}>Verse</span>
+              </span>
+            </div>
+
+            {subDone ? (
+               <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', fontSize: 12, fontWeight: 600 }}>✓ Subscribed</div>
+            ) : (
+               <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 2, border: `1px solid ${BORDER}` }}>
+                 <input type="email" placeholder="Join newsletter..." value={email} onChange={e => setEmail(e.target.value)} style={{ flex: 1, padding: '8px 12px', background: 'transparent', border: 'none', color: TEXT, fontSize: 12, outline: 'none' }} />
+                 <button onClick={subscribe} style={{ padding: '0 14px', borderRadius: 6, background: AMBER, border: 'none', color: '#fff', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>JOIN</button>
+               </div>
+            )}
+          </div>
+
+          {/* Links Grid: 2 Columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 12px', marginBottom: 24 }}>
+            {NAV.slice(0, 4).map((section) => (
+              <div key={section.heading}>
+                <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: AMBER, margin: '0 0 8px' }}>
+                  {section.heading}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {section.items.slice(0, 4).map(({ label, path }) => (
+                     <button key={label} onClick={() => { window.scrollTo(0, 0); navigate(path); }} style={{ background: 'none', border: 'none', padding: 0, color: '#B3B9C4', cursor: 'pointer', fontSize: 12, fontWeight: 500, textAlign: 'left', lineHeight: 1.4 }}>
+                       {label}
+                     </button>
+                  ))}
+                  {section.items.length > 4 && (
+                     <button onClick={() => navigate(section.items[0].path)} style={{ background: 'none', border: 'none', padding: 0, color: MUTED, cursor: 'pointer', fontSize: 11, fontWeight: 500, textAlign: 'left', marginTop: 2, fontStyle: 'italic' }}>
+                       + More
+                     </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Contact + Social Links — Combined section */}
+          <div style={{ marginBottom: 20, padding: '16px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}` }}>
+            <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: AMBER, margin: '0 0 12px' }}>Connect With Us</p>
+            
+            {/* Phone */}
+            <a href="tel:+918805147490" style={{ color: MUTED, fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ color: AMBER, display: 'flex' }}><PhoneIcon /></span>
+              <span>+91 8805147490</span>
+            </a>
+
+            {/* Email as button-style row */}
+            <a href="mailto:contact@techverseservices.in" style={{ color: MUTED, fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ color: AMBER, display: 'flex' }}><EmailIcon /></span>
+              <span>contact@techverseservices.in</span>
+            </a>
+
+            {/* Instagram as a prominent pill button */}
+            <a
+              href="https://www.instagram.com/techverseservices?igsh=cWt1YTgzbGVpM2o2"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '8px 16px', borderRadius: 99,
+                background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)',
+                color: '#fff', textDecoration: 'none',
+                fontSize: 12, fontWeight: 700,
+              }}
+            >
+              <InstagramIcon />
+              @techverseservices
+            </a>
+          </div>
+
+          {/* Trust Badges */}
+          <div style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 12, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+            {TRUST.map(t => (
+              <div key={t.label} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 4, background: 'rgba(255,255,255,0.03)', fontSize: 11, color: MUTED, fontWeight: 500 }}>
+                <span style={{ fontSize: 12 }}>{t.icon}</span><span>{t.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 0 14px' }} />
+
+          {/* Bottom Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {['Privacy', 'Terms', 'Shipping'].map((lbl) => (
+                <button key={lbl} onClick={() => navigate(`/${lbl.toLowerCase()}-policy`)} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 11, fontWeight: 500, cursor: 'pointer', padding: 0 }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Copyright & Zaikron credit */}
+          <div style={{ textAlign: 'center', paddingBottom: 16 }}>
+            <p style={{ fontSize: 10, color: DIM, margin: '0 0 4px' }}>
+              © 2026 TechVerse. All rights reserved.
+            </p>
+            <p style={{ fontSize: 10, color: DIM, margin: 0 }}>
+              Designed & Developed by{' '}
+              <a href="https://zaikron.com/" target="_blank" rel="noopener noreferrer" style={{ color: AMBER, fontWeight: 700, textDecoration: 'none' }}>Zaikron</a>
+            </p>
+          </div>
+
+        </div>
+      </footer>
+    );
+  }
+
+  // ════════════ DESKTOP FOOTER VIEW ════════════
   return (
-    <FooterWrapper>
-      <FooterTop>
-        <Grid container spacing={4}>
-          {/* Brand Section */}
-          <Grid item xs={12} sm={6} md={3}>
-            <FooterBrand>
-              <BrandLogo>TECHVERSE</BrandLogo>
-              <BrandTagline>
-                Your gateway to innovation. Bringing cutting-edge technology to your fingertips.
-              </BrandTagline>
-            </FooterBrand>
-            <SocialIconsBox>
-              <SocialIconBtn aria-label="Facebook" href="https://facebook.com" target="_blank">
-                <FacebookIcon sx={{ fontSize: '18px' }} />
-              </SocialIconBtn>
-              <SocialIconBtn aria-label="Twitter" href="https://twitter.com" target="_blank">
-                <TwitterIcon sx={{ fontSize: '18px' }} />
-              </SocialIconBtn>
-              <SocialIconBtn aria-label="LinkedIn" href="https://linkedin.com" target="_blank">
-                <LinkedInIcon sx={{ fontSize: '18px' }} />
-              </SocialIconBtn>
-              <SocialIconBtn aria-label="Instagram" href="https://instagram.com" target="_blank">
-                <InstagramIcon sx={{ fontSize: '18px' }} />
-              </SocialIconBtn>
-            </SocialIconsBox>
-          </Grid>
+    <footer style={{
+      background: BG,
+      borderTop: '3px solid rgba(212,146,42,0.3)',
+      fontFamily: "'Inter', sans-serif",
+      marginTop: 0,
+    }}>
 
-          {/* Quick Links */}
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FooterSection>
-              <Typography variant="h4">Quick Links</Typography>
-              <FooterLink onClick={() => navigate('/')}>Home</FooterLink>
-              <FooterLink onClick={() => navigate('/store')}>Shop</FooterLink>
-              <FooterLink onClick={() => navigate('/services')}>Services</FooterLink>
-              <FooterLink onClick={() => navigate('/my-orders')}>My Orders</FooterLink>
-              <FooterLink onClick={() => navigate('/profile')}>Profile</FooterLink>
-            </FooterSection>
-          </Grid>
+      {/* ── Top section: Brand + Newsletter ── */}
+      <div style={{
+        borderBottom: `1px solid ${BORDER}`,
+        padding: '56px 64px 48px',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 64,
+      }}>
+        {/* Brand block */}
+        <div>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: `linear-gradient(135deg, ${AMBER}, ${AMBER_L})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 4px 16px ${AMBER}40`,
+            }}>
+              <span style={{ color: '#fff', fontSize: 16, fontWeight: 900, lineHeight: 1 }}>T</span>
+            </div>
+            <span style={{ fontSize: 20, fontWeight: 800, color: TEXT, letterSpacing: '-0.05em' }}>
+              Tech<span style={{ color: AMBER }}>Verse</span>
+            </span>
+          </div>
 
-          {/* Categories */}
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FooterSection>
-              <Typography variant="h4">Categories</Typography>
-              <FooterLink onClick={() => navigate('/store?category=Laptop%20%2F%20PC')}>
-                Laptops & PCs
-              </FooterLink>
-              <FooterLink onClick={() => navigate('/store?category=Printer')}>
-                Printers
-              </FooterLink>
-              <FooterLink onClick={() => navigate('/store?category=Keyboard')}>
-                Keyboards
-              </FooterLink>
-              <FooterLink onClick={() => navigate('/store?category=Mouse')}>
-                Mice
-              </FooterLink>
-              <FooterLink onClick={() => navigate('/store?category=Headphones')}>
-                Headphones
-              </FooterLink>
-            </FooterSection>
-          </Grid>
+          <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.75, maxWidth: 320, margin: '0 0 24px' }}>
+            Your one-stop destination for premium tech products and expert repair services — built for quality and reliability.
+          </p>
 
-          {/* Contact */}
-          <Grid size={{ xs: 12, sm: 12, md: 3 }}>
-            <FooterSection>
-              <Typography variant="h4">Get In Touch</Typography>
-              <ContactItem href="mailto:contact@techverseservices.in">
-                <EmailIcon />
-                <span>contact@techverseservices.in</span>
-              </ContactItem>
-              <ContactItem href="tel:+918805147490">
-                <PhoneIcon />
-                <span>+91 8805147490</span>
-              </ContactItem>
-              <ContactItem
-                href="https://www.google.com/maps/search/?api=1&query=123+Tech+Street+Innovation+City+TC+12345"
-                target="_blank"
-                rel="noopener noreferrer"
+          {/* Contact info rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+            <a href="tel:+918805147490" style={{ color: MUTED, fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, transition: 'color 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = TEXT)}
+              onMouseLeave={e => (e.currentTarget.style.color = MUTED)}
+            >
+              <span style={{ color: AMBER, display: 'flex', flexShrink: 0 }}><PhoneIcon /></span>
+              +91 8805147490
+            </a>
+            <a href="mailto:contact@techverseservices.in" style={{ color: MUTED, fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, transition: 'color 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = TEXT)}
+              onMouseLeave={e => (e.currentTarget.style.color = MUTED)}
+            >
+              <span style={{ color: AMBER, display: 'flex', flexShrink: 0 }}><EmailIcon /></span>
+              contact@techverseservices.in
+            </a>
+          </div>
+
+          {/* Instagram pill button — clearly visible */}
+          <a
+            href="https://www.instagram.com/techverseservices?igsh=cWt1YTgzbGVpM2o2"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '9px 18px', borderRadius: 99,
+              background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)',
+              color: '#fff', textDecoration: 'none',
+              fontSize: 13, fontWeight: 700,
+              marginBottom: 28,
+              boxShadow: '0 4px 14px rgba(253,29,29,0.3)',
+              transition: 'transform 0.2s, opacity 0.2s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.04)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'; }}
+          >
+            <InstagramIcon />
+            @techverseservices
+          </a>
+
+          {/* Trust badges */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {TRUST.map(t => (
+              <div key={t.label} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 8,
+                background: SURFACE, border: `1px solid ${BORDER}`,
+                fontSize: 11, color: MUTED, fontWeight: 500,
+              }}>
+                <span>{t.icon}</span><span>{t.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Newsletter */}
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <p style={{
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '0.14em', color: AMBER, margin: '0 0 10px',
+          }}>
+            Newsletter
+          </p>
+          <h3 style={{
+            fontSize: 22, fontWeight: 800, color: TEXT,
+            letterSpacing: '-0.04em', margin: '0 0 8px', lineHeight: 1.2,
+          }}>
+            Stay Ahead of the Tech Curve
+          </h3>
+          <p style={{ fontSize: 13, color: MUTED, margin: '0 0 20px', lineHeight: 1.65 }}>
+            Exclusive deals, new arrivals and repair tips — no spam, ever.
+          </p>
+
+          {subDone ? (
+            <div style={{
+              padding: '14px 18px', borderRadius: 10,
+              border: '1px solid rgba(74,222,128,0.25)',
+              background: 'rgba(74,222,128,0.08)',
+              color: '#4ade80', fontSize: 13, fontWeight: 600,
+            }}>
+              ✓ You're subscribed! Thanks for joining.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input
+                type="email" placeholder="Enter your email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && subscribe()}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                style={{
+                  flex: 1, padding: '12px 16px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.07)',
+                  border: `1px solid ${focused ? AMBER + '70' : BORDER}`,
+                  color: TEXT, fontSize: 13, outline: 'none',
+                  fontFamily: "'Inter', sans-serif", transition: 'border-color 0.2s',
+                }}
+              />
+              <button onClick={subscribe} style={{
+                padding: '12px 20px', borderRadius: 10,
+                background: `linear-gradient(135deg, ${AMBER}, ${AMBER_L})`,
+                border: 'none', color: '#fff',
+                fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap',
+                boxShadow: `0 4px 14px ${AMBER}40`,
+                transition: 'opacity 0.15s',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                <LocationOnIcon />
-                <span>Chhatrapati Sambhajinagar, 431003</span>
-              </ContactItem>
-            </FooterSection>
-          </Grid>
-        </Grid>
-      </FooterTop>
+                Subscribe →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
-      <FooterBottom>
-        <CopyrightText>
-          © {new Date().getFullYear()} TechVerse. All rights reserved.
-        </CopyrightText>
-        <Box sx={{ display: 'flex', gap: '20px', '@media (max-width:900px)': { flexDirection: 'column', gap: '10px', alignItems: 'center' } }}>
-          <FooterLink onClick={() => navigate('/privacy-policy')} style={{ display: 'inline', margin: 0, fontSize: '12px' }}>
-            Privacy Policy
-          </FooterLink>
-          <FooterLink onClick={() => navigate('/return-policy')} style={{ display: 'inline', margin: 0, fontSize: '12px' }}>
-            Return Policy
-          </FooterLink>
-          <FooterLink onClick={() => navigate('/refund-policy')} style={{ display: 'inline', margin: 0, fontSize: '12px' }}>
-            Refund Policy
-          </FooterLink>
-          <FooterLink onClick={() => navigate('/shipping-policy')} style={{ display: 'inline', margin: 0, fontSize: '12px' }}>
-            Shipping Policy
-          </FooterLink>
-          <FooterLink onClick={() => navigate('/terms-conditions')} style={{ display: 'inline', margin: 0, fontSize: '12px' }}>
-            Terms & Conditions
-          </FooterLink>
-        </Box>
-        <PaymentIcons>
-          <PaymentIcon>VISA</PaymentIcon>
-          <PaymentIcon>MC</PaymentIcon>
-          <PaymentIcon>AMEX</PaymentIcon>
-        </PaymentIcons>
-      </FooterBottom>
-    </FooterWrapper >
+      {/* ── Nav grid ── */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '32px 48px', padding: '48px 64px',
+        borderBottom: `1px solid ${BORDER}`,
+      }}>
+        {NAV.map(section => (
+          <div key={section.heading}>
+            <p style={{
+              fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.12em', color: AMBER, margin: '0 0 14px',
+            }}>
+              {section.heading}
+            </p>
+            <div>{section.items.map(({ label, path }) => navLink(label, path))}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Bottom bar ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', flexWrap: 'wrap',
+        gap: 16, padding: '20px 64px',
+      }}>
+        {/* Copyright + Zaikron link */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <p style={{ fontSize: 12, color: DIM, margin: 0 }}>
+            © 2026 TechVerse. All rights reserved.
+          </p>
+          <p style={{ fontSize: 11, color: DIM, margin: 0 }}>
+            Designed & Developed by{' '}
+            <a
+              href="https://zaikron.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: AMBER, fontWeight: 700, textDecoration: 'none' }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline')}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none')}
+            >
+              Zaikron
+            </a>
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { label: 'Privacy',  path: '/privacy-policy' },
+            { label: 'Terms',    path: '/terms-conditions' },
+            { label: 'Shipping', path: '/shipping-policy' },
+          ].map(({ label, path }) => (
+            <button key={label} onClick={() => navigate(path)} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 12, color: DIM, fontFamily: "'Inter', sans-serif",
+              padding: 0, transition: 'color 0.15s',
+            }}
+              onMouseEnter={e => (e.currentTarget.style.color = MUTED)}
+              onMouseLeave={e => (e.currentTarget.style.color = DIM)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </footer>
   );
 };
 

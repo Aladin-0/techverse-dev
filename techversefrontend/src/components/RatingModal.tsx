@@ -21,133 +21,146 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useSnackbar } from 'notistack';
 import { useRating } from '../hooks/useRating';
 
+const NAVY = '#1C2B4A';
+const GOLD = '#D4922A';
+const BG = '#FAF9F5';
+const TEXT = '#1A1814';
+const MUTED = '#6B7280';
+const BORDER = 'rgba(28,43,74,0.1)';
+
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
-    background: 'linear-gradient(135deg, rgba(20, 20, 20, 0.98) 0%, rgba(10, 10, 10, 0.99) 100%)',
-    backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
-    borderRadius: '20px',
-    color: 'white',
+    background: BG,
+    border: `1px solid ${BORDER}`,
+    borderRadius: '24px',
+    color: TEXT,
     width: 'calc(100% - 32px)',
-    maxWidth: '500px',
+    maxWidth: '480px',
     margin: '16px',
+    boxShadow: '0 24px 48px -12px rgba(28,43,74,0.15)',
+    fontFamily: "'Inter', sans-serif",
   }
 }));
 
 const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
-  color: 'rgba(255, 255, 255, 0.95)',
-  fontSize: '20px',
-  fontWeight: 600,
+  color: NAVY,
+  fontSize: '22px',
+  fontWeight: 800,
   textAlign: 'center',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-  padding: '16px 24px',
+  padding: '24px 24px 8px 24px',
+  letterSpacing: '-0.02em',
+  fontFamily: "'Inter', sans-serif",
   [theme.breakpoints.down('sm')]: {
-    fontSize: '18px',
-    padding: '16px',
+    fontSize: '20px',
+    padding: '20px 20px 8px 20px',
   },
 }));
 
 const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
   padding: '24px',
   [theme.breakpoints.down('sm')]: {
-    padding: '16px',
+    padding: '20px',
   },
 }));
 
 const StyledRating = styled(Rating)(({ theme }) => ({
-  fontSize: '3rem',
-  color: '#fbbf24',
+  fontSize: '3.5rem',
+  color: GOLD,
   '& .MuiRating-iconEmpty': {
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: 'rgba(212,146,42,0.2)',
   },
   '& .MuiRating-iconFilled': {
-    color: '#fbbf24',
+    color: GOLD,
   },
   '& .MuiRating-iconHover': {
-    color: '#f59e0b',
+    color: '#E09020',
   },
   [theme.breakpoints.down('sm')]: {
-    fontSize: '2.5rem',
+    fontSize: '3rem',
   },
 }));
 
 const TechnicianCard = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  borderRadius: '12px',
+  background: '#ffffff',
+  border: `1px solid ${BORDER}`,
+  boxShadow: '0 2px 12px rgba(28,43,74,0.03)',
+  borderRadius: '16px',
   padding: '16px',
-  marginBottom: '20px',
+  marginBottom: '24px',
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
+  gap: '16px',
   [theme.breakpoints.down('sm')]: {
     flexDirection: 'column',
     textAlign: 'center',
-    gap: '16px',
+    gap: '12px',
+    padding: '20px',
   },
 }));
 
 const SubmitButton = styled(Button)({
-  backgroundColor: 'rgba(34, 197, 94, 0.15)',
-  border: '1px solid rgba(34, 197, 94, 0.3)',
-  color: '#22c55e',
+  backgroundColor: NAVY,
+  color: '#fff',
   borderRadius: '12px',
-  padding: '10px 24px',
+  padding: '12px 28px',
   fontSize: '14px',
-  fontWeight: 600,
+  fontWeight: 700,
   textTransform: 'none',
+  boxShadow: '0 4px 12px rgba(28,43,74,0.15)',
   transition: 'all 0.3s ease',
   '&:hover': {
-    backgroundColor: 'rgba(34, 197, 94, 0.25)',
-    borderColor: 'rgba(34, 197, 94, 0.4)',
+    backgroundColor: '#111A2D',
+    boxShadow: '0 6px 16px rgba(28,43,74,0.2)',
   },
   '&:disabled': {
-    backgroundColor: 'rgba(156, 163, 175, 0.15)',
-    borderColor: 'rgba(156, 163, 175, 0.3)',
-    color: 'rgba(156, 163, 175, 0.6)',
+    backgroundColor: 'rgba(28,43,74,0.05)',
+    color: 'rgba(28,43,74,0.3)',
+    boxShadow: 'none',
   },
 });
 
 const CancelButton = styled(Button)({
-  color: 'rgba(255, 255, 255, 0.7)',
+  color: MUTED,
   borderRadius: '12px',
-  padding: '10px 24px',
+  padding: '12px 24px',
   fontSize: '14px',
-  fontWeight: 500,
+  fontWeight: 600,
   textTransform: 'none',
   '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(28,43,74,0.04)',
+    color: NAVY,
   },
 });
 
 const StyledTextField = styled(TextField)({
   '& .MuiOutlinedInput-root': {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
-    borderRadius: '8px',
-    color: 'white',
+    backgroundColor: '#ffffff',
+    border: `1px solid ${BORDER}`,
+    borderRadius: '12px',
+    color: TEXT,
+    fontFamily: "'Inter', sans-serif",
+    transition: 'all 0.2s ease',
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-      borderColor: 'rgba(255, 255, 255, 0.2)',
+      borderColor: 'rgba(28,43,74,0.3)',
     },
     '&.Mui-focused': {
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-      borderColor: '#22c55e',
+      backgroundColor: '#ffffff',
+      borderColor: NAVY,
+      boxShadow: '0 0 0 3px rgba(28,43,74,0.08)',
     },
     '& fieldset': {
       border: 'none',
     },
   },
   '& .MuiInputLabel-root': {
-    color: 'rgba(255, 255, 255, 0.6)',
-    '&.Mui-focused': {
-      color: '#22c55e',
-    },
+    color: MUTED,
+    fontFamily: "'Inter', sans-serif",
   },
   '& .MuiOutlinedInput-input': {
-    color: 'white',
+    color: TEXT,
+    padding: '14px',
     '&::placeholder': {
-      color: 'rgba(255, 255, 255, 0.4)',
+      color: '#A0AABF',
     },
   },
 });
@@ -260,17 +273,17 @@ export const RatingModal: React.FC<RatingModalProps> = ({
           <Avatar sx={{ 
             width: 50, 
             height: 50, 
-            background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+            background: `linear-gradient(135deg, ${NAVY}, #2a3f6a)`,
             fontSize: '20px',
-            fontWeight: 600
+            fontWeight: 700
           }}>
             {technicianInfo.name.charAt(0).toUpperCase()}
           </Avatar>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: 'white', fontWeight: 600, mb: 0.5 }}>
+            <Typography sx={{ color: TEXT, fontWeight: 700, mb: 0.5, fontFamily: "'Inter', sans-serif" }}>
               {technicianInfo.name}
             </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>
+            <Typography sx={{ color: MUTED, fontSize: '13px', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
               Technician • {technicianInfo.phone}
             </Typography>
           </Box>
@@ -278,17 +291,18 @@ export const RatingModal: React.FC<RatingModalProps> = ({
             label={isOrder ? 'Order' : 'Service'}
             size="small"
             sx={{
-              backgroundColor: isOrder ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
-              color: isOrder ? '#3b82f6' : '#8b5cf6',
-              border: `1px solid ${isOrder ? 'rgba(59, 130, 246, 0.3)' : 'rgba(139, 92, 246, 0.3)'}`,
-              fontWeight: 600,
+              backgroundColor: isOrder ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+              color: isOrder ? '#2563eb' : '#7c3aed',
+              border: `1px solid ${isOrder ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
+              fontWeight: 800,
+              fontFamily: "'Inter', sans-serif"
             }}
           />
         </TechnicianCard>
 
         {/* Rating Section */}
         <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 2, fontSize: '16px' }}>
+          <Typography sx={{ color: TEXT, mb: 2, fontSize: '15px', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
             How would you rate the {serviceType} experience?
           </Typography>
           
@@ -306,9 +320,10 @@ export const RatingModal: React.FC<RatingModalProps> = ({
 
           {rating && (
             <Typography sx={{ 
-              color: '#fbbf24', 
-              fontWeight: 600, 
-              fontSize: '18px',
+              color: GOLD, 
+              fontWeight: 800, 
+              fontSize: '16px',
+              fontFamily: "'Inter', sans-serif",
               mb: 1 
             }}>
               {ratingLabels[rating]} ({rating}/5)
@@ -319,11 +334,13 @@ export const RatingModal: React.FC<RatingModalProps> = ({
         {/* Comment Section */}
         <Box sx={{ mb: 3 }}>
           <Typography sx={{ 
-            color: 'rgba(255, 255, 255, 0.8)', 
-            mb: 2, 
-            fontSize: '14px' 
+            color: TEXT, 
+            mb: 1.5, 
+            fontSize: '14px',
+            fontWeight: 700,
+            fontFamily: "'Inter', sans-serif"
           }}>
-            Share your feedback (optional)
+            Share your feedback <span style={{ color: MUTED, fontWeight: 500 }}>(optional)</span>
           </Typography>
           <StyledTextField
             fullWidth

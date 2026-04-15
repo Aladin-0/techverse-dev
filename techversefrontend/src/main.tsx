@@ -2,9 +2,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import ErrorBoundary from './ErrorBoundary';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
-import './App.css';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -23,19 +22,43 @@ const darkTheme = createTheme({
   palette: {
     mode: 'dark',
   },
+  typography: {
+    // Use Inter everywhere — matches Stitch design exactly
+    fontFamily: "'Inter', sans-serif",
+    fontWeightBold: 900,
+  },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        'html, body, #root': {
+          fontFamily: "'Inter', sans-serif",
+        },
+      },
+    },
+  },
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <ThemeProvider theme={darkTheme}>
-        <SnackbarProvider>
-          <CssBaseline />
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
-        </SnackbarProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  </React.StrictMode>,
+  <BrowserRouter>
+    <ThemeProvider theme={darkTheme}>
+      <SnackbarProvider 
+        autoHideDuration={2500} 
+        maxSnack={2}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        style={{ 
+          fontSize: '14px', 
+          borderRadius: '12px', 
+          maxWidth: '90vw', 
+          wordBreak: 'break-word', 
+          whiteSpace: 'normal',
+          lineHeight: 1.4
+        }}
+      >
+        <CssBaseline />
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </SnackbarProvider>
+    </ThemeProvider>
+  </BrowserRouter>
 );

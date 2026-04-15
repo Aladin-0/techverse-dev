@@ -13,6 +13,8 @@ from .serializers import ServiceCategorySerializer, ServiceRequestSerializer, Se
 from .models import JobSheet, JobSheetMaterial
 from .serializers import JobSheetSerializer, JobSheetDetailSerializer
 from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Count, Q
 
 @login_required
 def select_service_category(request):
@@ -162,7 +164,13 @@ class ServiceRequestHistoryAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return ServiceRequest.objects.filter(customer=self.request.user).order_by('-request_date')
+        from django.db import models
+        return ServiceRequest.objects.filter(
+            customer=self.request.user
+        ).filter(
+            models.Q(payments__status='SUCCESS') | 
+            ~models.Q(status='SUBMITTED')
+        ).prefetch_related('payments').distinct().order_by('-request_date')
 
 # Rating API Views
 @api_view(['POST'])
@@ -468,18 +476,12 @@ def get_job_sheets(request):
                 'service_request', 'service_request__customer', 'service_request__service_category'
             ).prefetch_related('materials')
         
-        elif request.user.role == 'CUSTOMER':
+        else:
             job_sheets = JobSheet.objects.filter(
                 service_request__customer=request.user
             ).select_related(
                 'service_request', 'created_by', 'service_request__service_category'
             ).prefetch_related('materials')
-        
-        else:
-            return Response(
-                {'error': 'Unauthorized'},
-                status=status.HTTP_403_FORBIDDEN
-            )
         
         serializer = JobSheetDetailSerializer(job_sheets, many=True)
         return Response(serializer.data)
@@ -514,17 +516,12 @@ def get_job_sheet_detail(request, job_sheet_id):
                     {'error': 'Not authorized to view this job sheet'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        elif request.user.role == 'CUSTOMER':
+        else:
             if job_sheet.service_request.customer != request.user:
                 return Response(
                     {'error': 'Not authorized to view this job sheet'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        else:
-            return Response(
-                {'error': 'Unauthorized'},
-                status=status.HTTP_403_FORBIDDEN
-            )
         
         serializer = JobSheetDetailSerializer(job_sheet)
         return Response(serializer.data)
@@ -705,3 +702,36 @@ def complete_service_request(request, service_id):
             {'error': f'An error occurred: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+# Added Custom Trending Analytics Endpoint
+class TrendingServiceCategoriesAPIView(APIView):
+    """
+    API view to list Top 5 Trending Service Categories of the week.
+    Fallback to all-time Top 5 if no bookings in the last 7 days.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        one_week_ago = timezone.now() - timedelta(days=7)
+        
+        # Get top 5 from the past 7 days based on real ServiceRequests counts
+        trending_categories = ServiceCategory.objects.annotate(
+            weekly_requests=Count('servicerequest', filter=Q(servicerequest__request_date__gte=one_week_ago))
+        ).filter(weekly_requests__gt=0).order_by('-weekly_requests')[:5]
+
+        # Fallback if no bookings this week at all
+        if not trending_categories.exists():
+            trending_categories = ServiceCategory.objects.annotate(
+                all_time_requests=Count('servicerequest')
+            ).order_by('-all_time_requests')[:5]
+            
+            # If the database is completely empty just take the first 5 categories
+            if not trending_categories.exists():
+                trending_categories = ServiceCategory.objects.all()[:5]
+
+        serializer = ServiceCategorySerializer(
+            trending_categories, 
+            many=True,
+            context={'request': request}
+        )
+        return Response(serializer.data)

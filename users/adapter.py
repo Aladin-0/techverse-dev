@@ -56,17 +56,63 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     """Custom adapter for Google OAuth with JWT token generation"""
     
     def get_app(self, request, provider, client_id=None):
-        """Override to fix MultipleObjectsReturned error"""
+        """
+        Override to get app config from settings (env vars) as primary source,
+        falling back to DB if needed. This fixes dev environments with fresh DBs.
+        """
+        from django.conf import settings as django_settings
+
+        # --- Try settings-based config first (no DB required) ---
+        provider_conf = django_settings.SOCIALACCOUNT_PROVIDERS.get(provider, {})
+        app_conf = provider_conf.get('APP', {})
+        conf_client_id = app_conf.get('client_id')
+        conf_secret = app_conf.get('secret')
+
+        if conf_client_id and conf_secret:
+            from allauth.socialaccount.models import SocialApp
+            from django.contrib.sites.models import Site
+
+            # Try to get or auto-create the SocialApp record so allauth is happy
+            try:
+                current_site = Site.objects.get_current(request)
+            except Exception:
+                current_site = None
+
+            app, created = SocialApp.objects.get_or_create(
+                provider=provider,
+                defaults={
+                    'name': f'{provider.capitalize()} OAuth',
+                    'client_id': conf_client_id,
+                    'secret': conf_secret,
+                }
+            )
+            # Keep credentials in sync with env (useful when keys rotate)
+            if app.client_id != conf_client_id or app.secret != conf_secret:
+                app.client_id = conf_client_id
+                app.secret = conf_secret
+                app.save(update_fields=['client_id', 'secret'])
+
+            if current_site and not app.sites.filter(pk=current_site.pk).exists():
+                app.sites.add(current_site)
+
+            return app
+
+        # --- Fallback: look in DB (production behaviour) ---
         apps = SocialApp.objects.filter(provider=provider)
         valid_apps = [app for app in apps if app.name and app.client_id]
-        
+
         if client_id:
             valid_apps = [app for app in valid_apps if app.client_id == client_id]
-        
+
         if len(valid_apps) == 0:
-            raise SocialApp.DoesNotExist(f"No {provider} app found")
-        
+            raise SocialApp.DoesNotExist(
+                f"No {provider} app found. "
+                f"Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env "
+                f"or add a SocialApp record in admin."
+            )
+
         return valid_apps[0]
+
     
     def on_authentication_error(self, request, provider, error=None, exception=None, extra_context=None):
         """Handle authentication errors"""

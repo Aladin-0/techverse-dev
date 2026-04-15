@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from django.core.cache import cache
 from .models import PaymentTransaction
 from store.models import Order
-from services.models import ServiceRequest
+from services.models import ServiceRequest, ServiceSettings
 import os
 
 logger = logging.getLogger(__name__)
@@ -89,7 +89,12 @@ def initiate_payment(request):
             amount = float(order.total_amount)
         elif service_request_id:
             service_request = ServiceRequest.objects.get(id=service_request_id, customer=user)
-            amount = 500.00
+            if service_request.issue and service_request.issue.price:
+                amount = float(service_request.issue.price)
+            elif service_request.service_category:
+                amount = float(service_request.service_category.custom_request_price)
+            else:
+                amount = 500.00 # Fallback if no category is assigned
 
         # Create PaymentTransaction record
         merchant_order_id = f'ORD-{uuid.uuid4().hex[:16].upper()}'
@@ -142,6 +147,7 @@ def initiate_payment(request):
             payment.status = 'FAILED'
             payment.response_message = json.dumps(response_data)
             payment.save()
+            _cancel_service_on_failed_payment(payment)
             return Response(
                 {'error': 'Failed to initiate payment with gateway', 'details': response_data},
                 status=400
@@ -264,6 +270,7 @@ def verify_payment_status(merchant_order_id):
                         f'got {paid_amount_paise} paise'
                     )
                     payment.save()
+                    _cancel_service_on_failed_payment(payment)
                     logger.warning(
                         f'PAYMENT MISMATCH: {merchant_order_id} '
                         f'expected {expected_amount_paise} got {paid_amount_paise}'
@@ -271,6 +278,7 @@ def verify_payment_status(merchant_order_id):
             elif state in ['FAILED', 'FAILED_COMPLETED']:
                 payment.status = 'FAILED'
                 payment.save()
+                _cancel_service_on_failed_payment(payment)
             else:
                 # PENDING or unknown state — don't change status yet
                 payment.save()
@@ -290,3 +298,13 @@ def _fulfill_payment(payment):
     elif payment.service_request:
         payment.service_request.status = 'CONFIRMED'
         payment.service_request.save()
+
+
+def _cancel_service_on_failed_payment(payment):
+    """Cancel the linked service request or order when its payment fails."""
+    if payment.service_request:
+        payment.service_request.status = 'CANCELLED'
+        payment.service_request.save()
+    if payment.order:
+        payment.order.status = 'CANCELLED'
+        payment.order.save()

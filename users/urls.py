@@ -19,10 +19,11 @@ urlpatterns = [
     path('profile/', views.UserProfileUpdateView.as_view(), name='api-profile'),
     path('profile/validate/', views.ProfileValidationView.as_view(), name='api-profile-validate'),
     path('change-password/', views.ChangePasswordView.as_view(), name='api-change-password'),
+    path('set-password/', views.SetPasswordView.as_view(), name='api-set-password'),
     path('delete-account/', views.DeleteAccountView.as_view(), name='api-delete-account'),
-    path('logout-session/', views.LogoutView.as_view(), name='api-logout'),  # ADD THIS LINE
+    path('logout-session/', views.LogoutView.as_view(), name='api-logout'),
 
-    # Debug endpoints
+    # Debug endpoints (staff only -- guarded server-side by IsAdminUser)
     path('debug-auth/', views.DebugAuthView.as_view(), name='debug-auth'),
-    path('create-from-google/', views.create_user_from_google, name='create-from-google'),
+    # NOTE: create-from-google/ has been permanently removed (account-takeover vector).
 ]

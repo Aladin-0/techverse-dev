@@ -5,10 +5,17 @@ from allauth.account.adapter import get_adapter
 from .models import CustomUser
 
 class UserSerializer(serializers.ModelSerializer):
+    # Tells the frontend if this user can login with email+password.
+    # Returns False for Google-only users who haven't set a password yet.
+    has_password = serializers.SerializerMethodField()
+
+    def get_has_password(self, user):
+        return user.has_usable_password()
+
     class Meta:
         model = CustomUser
-        fields = ['id', 'email', 'name', 'phone', 'role', 'email_notifications', 'sms_notifications']
-        read_only_fields = ['id', 'email', 'role']
+        fields = ['id', 'email', 'name', 'phone', 'role', 'email_notifications', 'sms_notifications', 'has_password']
+        read_only_fields = ['id', 'email', 'role', 'has_password']
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:

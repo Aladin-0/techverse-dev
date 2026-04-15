@@ -1,1749 +1,1506 @@
-// LandingPage.tsx
-// ==================== IMPORTS ====================
-import React, { useRef, useEffect, Suspense, useState, useCallback } from 'react';
+// LandingPage.tsx  — LogiCraft-structure adapted for TechVerse
+// Hero: full-bleed image + left dark overlay + search bar
+// Then: numbered services | stats | marquee | how-we-work | promo banner | products | testimonials
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { styled, ThemeProvider, createTheme } from '@mui/material/styles';
-import { Box, Button, Grid, Typography, IconButton, useMediaQuery, useTheme } from '@mui/material';
-import { Canvas } from '@react-three/fiber';
-import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
-import { useSpring as useSpringWeb, animated as a } from '@react-spring/web';
-import { useSpring as useSpring3d, animated as a3 } from '@react-spring/three';
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import { useServiceStore } from '../stores/serviceStore';
+import { useProductStore } from '../stores/productStore';
+
+import { VaultPreloader } from '../components/VaultPreloader';
+import Showcase3D from '../components/Showcase3D';
+import LaptopScrollSection from '../components/LaptopScrollSection';
+import { BackgroundPaths } from '../components/ui/background-paths';
+import apiClient, { getImageUrl } from '../api';
+
+import { motion, useMotionValue, useSpring, useTransform, useScroll, useMotionValueEvent } from 'framer-motion';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import StarIcon from '@mui/icons-material/Star';
+import SearchIcon from '@mui/icons-material/Search';
 import BuildIcon from '@mui/icons-material/Build';
 import ComputerIcon from '@mui/icons-material/Computer';
-import PrintIcon from '@mui/icons-material/Print';
+import StorageIcon from '@mui/icons-material/Storage';
+import RouterIcon from '@mui/icons-material/Router';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import LaptopIcon from '@mui/icons-material/Laptop';
 import HeadphonesIcon from '@mui/icons-material/Headphones';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
-import TvIcon from '@mui/icons-material/Tv';
-import RouterIcon from '@mui/icons-material/Router';
-import ConstructionIcon from '@mui/icons-material/Construction';
-import FlashOnIcon from '@mui/icons-material/FlashOn';
-import ShieldIcon from '@mui/icons-material/Shield';
-import { LoginSuccessHandler } from '../components/LoginSuccessHandler';
-import { Footer } from '../components/Footer';
-import { useServiceStore } from '../stores/serviceStore';
 
-// ==================== THEME CONFIGURATION ====================
-const theme = createTheme();
-
-// ==================== BASE PAGE STYLES ====================
-const PageWrapper = styled(Box)({
-  backgroundColor: '#0a0a0a',
-  color: 'white',
-  fontFamily: "'Inter', sans-serif",
-  minHeight: '100vh',
-  width: '100%',
-  overflowX: 'hidden',
-});
-
-// ==================== HERO SECTION STYLES ====================
-// Main hero section wrapper with background image
-const HeroSection = styled(Box)({
-  backgroundImage: 'url("/hero-bg.png")',
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-  backgroundRepeat: 'no-repeat',
-  position: 'relative',
-  minHeight: '100vh',
-  width: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  backgroundColor: '#0a0a0a',
-  '@media (max-width:900px)': {
-    minHeight: 'auto',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  },
-});
-
-// Navigation bar styles
-const Nav = styled(Box)({
-  position: 'relative',
-  zIndex: 10,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '32px 55px',
-  '@media (max-width:900px)': {
-    display: 'none', // Hide on mobile since we have the main NavBar
-  },
-});
-
-// Logo text styling
-const Logo = styled(Typography)({
-  fontSize: '14px',
-  fontWeight: 700,
-  letterSpacing: '1.5px',
-  color: '#ffffff',
-  '@media (max-width:900px)': {
-    fontSize: '16px',
-    letterSpacing: '2px',
-  },
-});
-
-// Navigation button styling
-const BlankButton = styled(Button)({
-  background: 'transparent',
-  border: '1px solid rgba(255, 255, 255, 0.12)',
-  color: 'rgba(255, 255, 255, 0.75)',
-  padding: '7px 20px',
-  borderRadius: '18px',
-  fontSize: '10px',
-  fontWeight: 500,
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  fontFamily: "'Inter', sans-serif",
-  letterSpacing: '0.3px',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  '@media (max-width:900px)': {
-    padding: '6px 16px',
-    fontSize: '9px',
-    borderRadius: '14px',
-  },
-});
-
-// Hero content container
-const HeroContainer = styled(Box)({
-  position: 'relative',
-  zIndex: 5,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '40px 55px 60px',
-  maxWidth: '1200px',
-  margin: '0 auto',
-  width: '100%',
-  '@media (max-width:900px)': {
-    flexDirection: 'column',
-    padding: '0 20px 20px',
-    textAlign: 'center',
-    gap: '20px',
-  },
-});
-
-// Left side hero content (text and buttons)
-const HeroLeft = styled(Box)({
-  flex: '0 0 45%',
-  paddingTop: '20px',
-  position: 'relative',
-  zIndex: 2,
-  '@media (max-width:900px)': {
-    flex: 'none',
-    paddingTop: '0',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-});
-
-// Main hero title
-const HeroTitle = styled(Typography)({
-  fontFamily: "'Nevera', sans-serif",
-  fontSize: '64px',
-  fontWeight: 400,
-  letterSpacing: '0.15px',
-  marginBottom: '14px',
-  color: '#ffffff',
-  lineHeight: 1,
-  marginLeft: '-60px',
-  '@media (max-width:900px)': {
-    fontSize: '36px',
-    marginLeft: '0',
-    marginBottom: '12px',
-    letterSpacing: '1px',
-  },
-});
-
-// Hero subtitle/tagline
-const HeroSubtitle = styled(Typography)({
-  fontFamily: "'Nevera', sans-serif",
-  fontSize: '25px',
-  letterSpacing: '0.08em',
-  color: 'rgba(255, 255, 255, 0.45)',
-  fontWeight: 400,
-  marginBottom: '28px',
-  marginLeft: '-60px',
-  '@media (max-width:900px)': {
-    fontSize: '14px',
-    marginLeft: '0',
-    marginBottom: '20px',
-    maxWidth: '280px',
-    lineHeight: 1.4,
-  },
-});
-
-// Explore button styling
-const ExploreButton = styled(Button)({
-  background: 'transparent',
-  border: '1px solid rgba(255, 255, 255, 0.18)',
-  color: 'rgba(255, 255, 255, 0.75)',
-  padding: '10px 26px',
-  borderRadius: '22px',
-  fontSize: '15px',
-  fontWeight: 1000,
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  fontFamily: "'Inter', sans-serif",
-  letterSpacing: '0.8px',
-  textTransform: 'uppercase',
-  marginLeft: '-60px',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    transform: 'translateY(-1px)',
-  },
-  '@media (max-width:900px)': {
-    marginLeft: '0',
-    padding: '8px 24px',
-    fontSize: '11px',
-    borderRadius: '18px',
-    fontWeight: 700,
-  },
-});
-
-// ==================== PREMIUM SERVICES SECTION STYLES ====================
-const ServicesSection = styled(Box)({
-  background: `
-    linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #000000 100%)
-  `,
-  padding: '50px 45px',
-  position: 'relative',
-  zIndex: 10,
-  borderTop: '0px solid rgba(49, 40, 40, 0.05)',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-  '@media (max-width:900px)': {
-    padding: '0px 20px 10px',
-  },
-});
-
-const ServicesContainer = styled(Box)({
-  maxWidth: '1200px',
-  margin: '0 auto',
-  width: '100%',
-});
-
-const ServicesSectionTitle = styled(Typography)({
-  fontFamily: "'Nevera', sans-serif",
-  fontSize: '42px',
-  fontWeight: 400,
-  letterSpacing: '1px',
-  marginBottom: '40px',
-  color: '#ffffff',
-  textAlign: 'center',
-  background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  '@media (max-width:900px)': {
-    fontSize: '32px',
-    marginBottom: '12px',
-  },
-});
-
-const ServicesSectionSubtitle = styled(Typography)({
-  fontFamily: "'Inter', sans-serif",
-  fontSize: '16px',
-  color: 'rgba(255, 255, 255, 0.5)',
-  textAlign: 'center',
-  marginBottom: '60px',
-  maxWidth: '600px',
-  margin: '0 auto 60px',
-  lineHeight: 1.6,
-  '@media (max-width:900px)': {
-    fontSize: '14px',
-    marginBottom: '40px',
-  },
-});
-
-const ServicesGrid = styled(Box)({
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: '32px',
-  flexWrap: 'wrap',
-  '@media (max-width:900px)': {
-    gap: '20px',
-  },
-});
-
-const ServiceCard = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.320, 1), background 0.4s cubic-bezier(0.23, 1, 0.320, 1), box-shadow 0.4s cubic-bezier(0.23, 1, 0.320, 1)',
-  padding: '12px',
-  position: 'relative',
-  willChange: 'transform',
-  '&:hover': {
-    transform: 'translateY(-8px)',
-  },
-  '&:hover .service-icon-wrapper': {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06))',
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    transform: 'scale(1.08)',
-    boxShadow: `
-      0 12px 24px rgba(0, 0, 0, 0.4),
-      0 0 20px rgba(255, 255, 255, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15)
-    `,
-  },
-  '@media (max-width:900px)': {
-    padding: '8px',
-  },
-});
-
-const ServiceIconWrapper = styled(Box)({
-  width: '90px',
-  height: '90px',
-  borderRadius: '20px',
-  background: `
-    linear-gradient(135deg, 
-      rgba(255, 255, 255, 0.08) 0%, 
-      rgba(255, 255, 255, 0.04) 50%, 
-      rgba(255, 255, 255, 0.08) 100%
-    )
-  `,
-  border: '1px solid rgba(255, 255, 255, 0.12)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  justifyContent: 'center',
-  marginBottom: '16px',
-  transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.320, 1), background 0.4s cubic-bezier(0.23, 1, 0.320, 1), border-color 0.4s cubic-bezier(0.23, 1, 0.320, 1), box-shadow 0.4s cubic-bezier(0.23, 1, 0.320, 1)',
-  backdropFilter: 'blur(10px)',
-  position: 'relative',
-  willChange: 'transform',
-  overflow: 'hidden',
-  boxShadow: `
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1)
-  `,
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
-    transform: 'translateX(-100%)',
-    transition: 'transform 0.6s ease',
-  },
-  '.service-card:hover &::before': {
-    transform: 'translateX(100%)',
-  },
-  '& .MuiSvgIcon-root': {
-    fontSize: '44px',
-    color: 'rgba(255, 255, 255, 0.85)',
-    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
-    transition: 'all 0.3s ease',
-  },
-  '.service-card:hover & .MuiSvgIcon-root': {
-    color: 'rgba(255, 255, 255, 0.95)',
-    filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))',
-  },
-  '@media (max-width:900px)': {
-    width: '75px',
-    height: '75px',
-    borderRadius: '16px',
-    marginBottom: '12px',
-    '& .MuiSvgIcon-root': {
-      fontSize: '34px',
-    },
-  },
-});
-
-const ServiceTitle = styled(Typography)({
-  fontFamily: "'Inter', sans-serif",
-  fontSize: '14px',
-  fontWeight: 500,
-  color: 'rgba(255, 255, 255, 0.85)',
-  textAlign: 'center',
-  letterSpacing: '0.3px',
-  maxWidth: '110px',
-  lineHeight: 1.3,
-  transition: 'color 0.3s ease',
-  '.service-card:hover &': {
-    color: 'rgba(255, 255, 255, 0.95)',
-  },
-  '@media (max-width:900px)': {
-    fontSize: '13px',
-    maxWidth: '95px',
-  },
-});
-
-const MoreServicesCard = styled(ServiceCard)({
-  '& .service-icon-wrapper': {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
-    border: '1px solid rgba(255, 255, 255, 0.18)',
-  },
-  '&:hover .service-icon-wrapper': {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-});
-
-const MoreServicesIconBox = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'transform 0.3s ease',
-  '& svg': {
-    width: '44px',
-    height: '44px',
-    color: 'rgba(255, 255, 255, 0.85)',
-    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
-    transition: 'all 0.3s ease',
-  },
-  '.service-card:hover &': {
-    transform: 'rotate(20deg) scale(1.1)',
-  },
-  '.service-card:hover & svg': {
-    color: 'rgba(255, 255, 255, 0.95)',
-    filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))',
-  },
-  '@media (max-width:900px)': {
-    '& svg': {
-      width: '36px',
-      height: '36px',
-    },
-  },
-});
-
-// Arrow navigation buttons for 3D model carousel
-const ArrowButton = styled(IconButton)({
-  border: '1px solid rgba(255, 255, 255, 0.2)',
-  color: 'rgba(255, 255, 255, 0.7)',
-  '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  '@media (max-width:900px)': {
-    width: '36px',
-    height: '36px',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-  },
-});
-
-// 3D Canvas wrapper (right side of hero)
-const CanvasWrapper = styled(Box)({
-  position: 'absolute',
-  top: '120%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: '290%',
-  height: '290%',
-  zIndex: 1,
-  overflow: 'visible',
-  '@media (max-width:900px)': {
-    position: 'relative',
-    top: 'auto',
-    left: 'auto',
-    transform: 'none',
-    width: '100%',
-    height: '450px',
-    marginTop: '15px',
-  },
-});
-
-// ==================== END HERO SECTION STYLES ====================
-
-// ==================== CATEGORY SECTION STYLES ====================
-// Category section wrapper
-const CategorySection = styled(Box)({
-  padding: '100px 55px',
-  background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #0a0a0a 40%)',
-  position: 'relative',
-  overflow: 'hidden',
-  zIndex: 10,
-  '@media (max-width:900px)': {
-    padding: '50px 20px',
-  },
-});
-
-// Section header container
-const SectionHeader = styled(Box)({
-  textAlign: 'center',
-  marginBottom: '64px',
-  '@media (max-width:900px)': {
-    marginBottom: '35px',
-  },
-});
-
-// Section title text
-const SectionTitle = styled(Typography)({
-  fontFamily: "'Nevera', sans-serif",
-  fontSize: '32px',
-  fontWeight: 400,
-  marginBottom: '16px',
-  color: 'rgba(255, 255, 255, 0.95)',
-  '@media (max-width:900px)': {
-    fontSize: '24px',
-    marginBottom: '8px',
-    letterSpacing: '0.3px',
-  },
-});
-
-// Category cards grid layout
-const CategoryGrid = styled(Box)({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
-  gap: '48px 24px',
-  maxWidth: '1200px',
-  margin: '0 auto',
-  '@media (max-width:1024px)': {
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '30px 16px',
-  },
-  '@media (max-width:900px)': {
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '24px 10px',
-  },
-  '@media (max-width:500px)': {
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '20px 10px',
-  },
-});
-
-// Individual category card wrapper
-const CategoryItemWrapper = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: '16px',
-  position: 'relative',
-  zIndex: 11,
-  '@media (max-width:900px)': {
-    gap: '8px',
-  },
-});
-
-// Animated card container base
-const AnimatedCardBase = a(Box);
-const AnimatedCardContainer = styled(AnimatedCardBase)({
-  position: 'relative',
-  width: '100%',
-  aspectRatio: '1 / 1',
-  borderRadius: '12px',
-  backgroundColor: '#101010',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  cursor: 'pointer',
-  transformStyle: 'preserve-3d',
-  willChange: 'transform, box-shadow',
-  zIndex: 12,
-  '@media (max-width:900px)': {
-    borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-  },
-});
-
-// Product image within card
-const ProductImage = styled('img')({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-  borderRadius: '12px',
-  opacity: 0,
-  transform: 'translateZ(0px) scale(0.9)',
-  transition: 'all 0.6s cubic-bezier(0.23, 1, 0.320, 1)',
-  filter: 'brightness(0.8) contrast(1.1)',
-  '@media (max-width:900px)': {
-    borderRadius: '8px',
-    opacity: 0.95,
-    transform: 'translateZ(0px) scale(1)',
-    filter: 'brightness(0.85) contrast(1.05)',
-  },
-});
-
-// Card glow effect on hover
-const CardGlow = styled(Box)({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  borderRadius: '12px',
-  opacity: 0,
-  transition: 'all 0.6s cubic-bezier(0.23, 1, 0.320, 1)',
-  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02))',
-  boxShadow: `
-        0 0 30px 10px rgba(255, 255, 255, 0.05),
-        inset 0 0 25px 5px rgba(255, 255, 255, 0.08)
-    `,
-  '@media (max-width:900px)': {
-    borderRadius: '8px',
-  },
-});
-
-// Category overlay on hover
-const CategoryOverlay = styled(Box)({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  borderRadius: '12px',
-  background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.1))',
-  opacity: 0,
-  transition: 'all 0.6s cubic-bezier(0.23, 1, 0.320, 1)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backdropFilter: 'blur(2px)',
-  '@media (max-width:900px)': {
-    borderRadius: '8px',
-    opacity: 0.1,
-  },
-});
-
-// Placeholder for missing images
-const PlaceholderBox = styled(Box)({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  borderRadius: '12px',
-  background: 'linear-gradient(135deg, #1a1a1a, #0f0f0f)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '12px',
-  color: 'rgba(255, 255, 255, 0.4)',
-  fontWeight: 500,
-  letterSpacing: '0.5px',
-  transition: 'all 0.6s cubic-bezier(0.23, 1, 0.320, 1)',
-  '@media (max-width:900px)': {
-    borderRadius: '8px',
-    fontSize: '10px',
-  },
-});
-
-// Category name text below card
-const CategoryName = styled(Typography)({
-  fontWeight: 600,
-  color: 'rgba(255, 255, 255, 0.5)',
-  transition: 'all 0.6s cubic-bezier(0.23, 1, 0.320, 1)',
-  transform: 'translateY(20px)',
-  opacity: 0,
-  fontSize: '14px',
-  letterSpacing: '0.5px',
-  textAlign: 'center',
-  '@media (max-width:900px)': {
-    fontSize: '9px',
-    opacity: 0.85,
-    transform: 'translateY(0px)',
-    color: 'rgba(255, 255, 255, 0.75)',
-    letterSpacing: '0.2px',
-    fontWeight: 500,
-  },
-});
-
-// ==================== END CATEGORY SECTION STYLES ====================
-
-// ==================== ABOUT SECTION STYLES ====================
-const AboutSection = styled(Box)({
-  background: 'linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%)',
-  borderRadius: '24px',
-  padding: '60px 65px',
-  margin: '40px 55px',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  display: 'grid',
-  gridTemplateColumns: '1.2fr 1.4fr 1.2fr',
-  gap: '65px',
-  alignItems: 'start',
-  position: 'relative',
-  zIndex: 5,
-  boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-  '@media (max-width:900px)': {
-    gridTemplateColumns: '1fr',
-    gap: '35px',
-    margin: '30px 20px',
-    padding: '35px 25px',
-    textAlign: 'center',
-    borderRadius: '16px',
-  },
-});
-
-const AboutContent = styled(Box)({
-  '& h3': {
-    fontSize: '24px',
-    fontWeight: 700,
-    marginBottom: '18px',
-    color: 'rgba(255, 255, 255, 0.95)',
-    background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    letterSpacing: '0.5px',
-    '@media (max-width:900px)': {
-      fontSize: '20px',
-      marginBottom: '14px',
-    },
-  },
-  '& p': {
-    fontSize: '14px',
-    lineHeight: 1.8,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: 400,
-    marginBottom: '20px',
-    '@media (max-width:900px)': {
-      fontSize: '13px',
-      lineHeight: 1.6,
-      marginBottom: '15px',
-    },
-  }
-});
-
-const ServicesWrapper = styled(Box)({
-  display: 'flex',
-  gap: '45px',
-  justifyContent: 'center',
-  paddingTop: '15px',
-  '@media (max-width:900px)': {
-    gap: '20px',
-    paddingTop: '10px',
-  },
-  '@media (max-width:600px)': {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: '20px',
-  },
-});
-
-const ServiceBox = styled(Box)({
-  textAlign: 'center',
-  transition: 'transform 0.3s ease',
-  '&:hover': {
-    transform: 'translateY(-5px)'
-  },
-  '@media (max-width:900px)': {
-    flex: '0 0 auto',
-  },
-});
-
-const ServiceIconBox = styled(Box)({
-  width: '64px',
-  height: '64px',
-  background: 'linear-gradient(135deg, #2a2a2a, #1e1e1e)',
-  border: '1px solid rgba(255, 255, 255, 0.12)',
-  borderRadius: '12px',
-  margin: '0 auto 15px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.4s ease',
-  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
-  '& .MuiSvgIcon-root': {
-    fontSize: '32px',
-    color: 'rgba(255, 255, 255, 0.85)',
-    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
-    transition: 'all 0.3s ease',
-  },
-  '&:hover': {
-    background: 'linear-gradient(135deg, #3a3a3a, #2e2e2e)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    transform: 'translateY(-3px)',
-    boxShadow: '0 12px 25px rgba(0, 0, 0, 0.4)',
-    '& .MuiSvgIcon-root': {
-      color: 'rgba(255, 255, 255, 0.95)',
-      filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))',
-    },
-  },
-  '@media (max-width:900px)': {
-    width: '50px',
-    height: '50px',
-    borderRadius: '10px',
-    margin: '0 auto 10px',
-    '& .MuiSvgIcon-root': {
-      fontSize: '26px',
-    },
-  },
-});
-
-const ServiceText = styled(Typography)({
-  fontSize: '12px',
-  color: 'rgba(255, 255, 255, 0.7)',
-  fontWeight: 500,
-  letterSpacing: '0.3px',
-  '@media (max-width:900px)': {
-    fontSize: '10px',
-  },
-});
-
-const StatsSection = styled(Box)({
-  '& h3': {
-    fontSize: '24px',
-    fontWeight: 700,
-    marginBottom: '8px',
-    color: 'rgba(255, 255, 255, 0.95)',
-    background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    letterSpacing: '0.5px',
-    '@media (max-width:900px)': {
-      fontSize: '20px',
-    },
-  },
-  '& .subtext': {
-    fontSize: '12px',
-    color: 'rgba(255, 255, 255, 0.4)',
-    marginBottom: '25px',
-    fontWeight: 400,
-    '@media (max-width:900px)': {
-      fontSize: '11px',
-      marginBottom: '20px',
-    },
-  }
-});
-
-const StatsGrid = styled(Box)({
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '20px',
-  '@media (max-width:900px)': {
-    gap: '12px',
-  },
-});
-
-const StatItem = styled(Box)({
-  textAlign: 'center',
-  padding: '20px 15px',
-  background: 'rgba(255, 255, 255, 0.02)',
-  borderRadius: '12px',
-  border: '1px solid rgba(255, 255, 255, 0.05)',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    transform: 'translateY(-2px)'
-  },
-  '@media (max-width:900px)': {
-    padding: '16px 12px',
-    borderRadius: '10px',
-  },
-});
-
-const StatNumber = styled(Typography)({
-  fontSize: '28px',
-  fontWeight: 700,
-  color: '#ffffff',
-  marginBottom: '5px',
-  background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  '@media (max-width:900px)': {
-    fontSize: '22px',
-  },
-});
-
-const StatLabel = styled(Typography)({
-  fontSize: '11px',
-  color: 'rgba(255, 255, 255, 0.6)',
-  fontWeight: 400,
-  letterSpacing: '0.3px',
-  '@media (max-width:900px)': {
-    fontSize: '10px',
-  },
-});
-
-// ==================== END ABOUT SECTION STYLES ====================
-
-// ==================== FEATURED SECTION STYLES ====================
-const SendButton = styled(Button)({
-  background: 'linear-gradient(135deg, #f8f8f8, #ffffff)',
-  color: '#0a0a0a',
-  border: 'none',
-  padding: '14px 35px',
-  borderRadius: '25px',
-  fontSize: '14px',
-  fontWeight: 700,
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  letterSpacing: '0.5px',
-  width: 'fit-content',
-  alignSelf: 'center',
-  display: 'block',
-  margin: '0 auto',
-  textTransform: 'uppercase',
-  boxShadow: '0 8px 20px rgba(248, 248, 248, 0.2)',
-  '&:hover': {
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-    transform: 'translateY(-3px)',
-    boxShadow: '0 12px 25px rgba(248, 248, 248, 0.3)'
-  },
-  '@media (max-width:900px)': {
-    padding: '12px 28px',
-    fontSize: '12px',
-    borderRadius: '20px',
-  },
-});
-
-const FeaturedWrapper = styled(Box)({
-  padding: '80px 55px',
-  background: 'linear-gradient(135deg, #0f0f0f 0%, #0a0a0a 100%)',
-  position: 'relative',
-  zIndex: 5,
-  '@media (max-width:900px)': {
-    padding: '50px 20px',
-  }
-});
-
-const FeaturedContainer = styled(Box)({
-  display: 'flex',
-  gap: '60px',
-  maxWidth: '1400px',
-  margin: '0 auto',
-  '@media (max-width:1024px)': {
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '40px',
-  }
-});
-
-const FeaturedLeft = styled(Box)({
-  flex: '0 0 360px',
-  '@media (max-width:1024px)': {
-    flex: 'none',
-    width: '100%',
-    maxWidth: '600px',
-    textAlign: 'center',
-  },
-  '@media (max-width:900px)': {
-    maxWidth: '100%',
-  },
-  '& h2': {
-    fontSize: '36px',
-    fontWeight: 700,
-    marginBottom: '20px',
-    color: 'rgba(255, 255, 255, 0.95)',
-    background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    letterSpacing: '0.5px',
-    '@media (max-width:900px)': {
-      fontSize: '26px',
-      marginBottom: '16px',
-    },
-  },
-  '& p': {
-    fontSize: '16px',
-    lineHeight: 1.7,
-    color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: '50px',
-    fontWeight: 400,
-    '@media (max-width:900px)': {
-      fontSize: '14px',
-      lineHeight: 1.6,
-      marginBottom: '35px',
-    },
-  }
-});
-
-const ContactBox = styled(Box)({
-  background: 'linear-gradient(135deg, #1a1a1a, #151515)',
-  borderRadius: '18px',
-  padding: '35px',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-  '@media (max-width:900px)': {
-    padding: '28px 22px',
-    borderRadius: '14px',
-  },
-  '& h3': {
-    fontSize: '22px',
-    fontWeight: 700,
-    marginBottom: '20px',
-    color: 'rgba(255, 255, 255, 0.95)',
-    background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    letterSpacing: '0.5px',
-    '@media (max-width:900px)': {
-      fontSize: '18px',
-      marginBottom: '16px',
-    },
-  }
-});
-
-const ContactInput = styled('input')({
-  background: 'rgba(0, 0, 0, 0.4)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  padding: '14px 18px',
-  borderRadius: '8px',
-  color: 'rgba(255, 255, 255, 0.9)',
-  fontSize: '14px',
-  marginBottom: '18px',
-  width: '100%',
-  fontFamily: "'Inter', sans-serif",
-  transition: 'all 0.3s ease',
-  '&::placeholder': { color: 'rgba(255, 255, 255, 0.3)' },
-  '&:focus': {
-    outline: 'none',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    background: 'rgba(0, 0, 0, 0.6)',
-    boxShadow: '0 0 0 3px rgba(255, 255, 255, 0.05)'
-  },
-  '@media (max-width:900px)': {
-    padding: '12px 16px',
-    fontSize: '13px',
-    marginBottom: '14px',
-  },
-});
-
-const FeaturedRight = styled(Box)({
-  flex: 1,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: '30px',
-  '@media (max-width:1024px)': {
-    width: '100%',
-    maxWidth: '800px',
-  },
-  '@media (max-width:900px)': {
-    gridTemplateColumns: '1fr',
-    gap: '20px',
-  }
-});
-
-const FeaturedCard = styled(Box)({
-  background: 'linear-gradient(135deg, #1a1a1a, #0f0f0f)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  borderRadius: '16px',
-  overflow: 'hidden',
-  transition: 'all 0.4s ease',
-  height: 'fit-content',
-  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-  '&:hover': {
-    transform: 'translateY(-8px)',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-    borderColor: 'rgba(255, 255, 255, 0.15)'
-  },
-  '@media (max-width:900px)': {
-    borderRadius: '12px',
-    '&:hover': {
-      transform: 'translateY(-4px)',
-    },
-  },
-});
-
-const FeaturedImg = styled(Box)({
-  height: '200px',
-  background: 'linear-gradient(135deg, #2a2a2a, #1a1a1a)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-  transition: 'all 0.3s ease',
-  '& .MuiSvgIcon-root': {
-    fontSize: '72px',
-    color: 'rgba(255, 255, 255, 0.25)',
-    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
-    transition: 'all 0.3s ease',
-  },
-  '.featured-card:hover &': {
-    background: 'linear-gradient(135deg, #3a3a3a, #2a2a2a)',
-    '& .MuiSvgIcon-root': {
-      color: 'rgba(255, 255, 255, 0.35)',
-      filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))',
-    },
-  },
-  '@media (max-width:900px)': {
-    height: '160px',
-    '& .MuiSvgIcon-root': {
-      fontSize: '60px',
-    },
-  },
-});
-
-const FeaturedDetails = styled(Box)({
-  padding: '25px',
-  '@media (max-width:900px)': {
-    padding: '20px',
-  },
-});
-
-const FeaturedTitle = styled(Typography)({
-  fontSize: '20px',
-  fontWeight: 700,
-  marginBottom: '12px',
-  color: 'rgba(255, 255, 255, 0.95)',
-  letterSpacing: '0.3px',
-  '@media (max-width:900px)': {
-    fontSize: '17px',
-    marginBottom: '10px',
-  },
-});
-
-const FeaturedDesc = styled(Typography)({
-  fontSize: '14px',
-  color: 'rgba(255, 255, 255, 0.6)',
-  lineHeight: 1.6,
-  marginBottom: '20px',
-  fontWeight: 400,
-  '@media (max-width:900px)': {
-    fontSize: '13px',
-    lineHeight: 1.5,
-    marginBottom: '16px',
-  },
-});
-
-const AuthorInfo = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  '@media (max-width:900px)': {
-    gap: '10px',
-  },
-});
-
-const AuthorAvatar = styled(Box)({
-  width: '32px',
-  height: '32px',
-  borderRadius: '50%',
-  background: 'linear-gradient(135deg, #404040, #2a2a2a)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  '@media (max-width:900px)': {
-    width: '28px',
-    height: '28px',
-  },
-});
-
-const AuthorDetails = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column'
-});
-
-const AuthorName = styled(Typography)({
-  fontSize: '14px',
-  fontWeight: 600,
-  color: 'rgba(255, 255, 255, 0.9)',
-  letterSpacing: '0.2px',
-  '@media (max-width:900px)': {
-    fontSize: '12px',
-  },
-});
-
-const AuthorRole = styled(Typography)({
-  fontSize: '12px',
-  color: 'rgba(255, 255, 255, 0.5)',
-  fontWeight: 400,
-  '@media (max-width:900px)': {
-    fontSize: '11px',
-  },
-});
-
-// ==================== END FEATURED SECTION STYLES ====================
-
-// ==================== 3D MODEL COMPONENTS ====================
-// Gaming Laptop 3D Model
-// Gaming Laptop 3D Model
-function GamingLaptop({ isMobile, ...props }: any) {
-  const { scene } = useGLTF('/gaming_laptop.glb');
-  return <primitive object={scene} scale={isMobile ? 2.5 : 2.0} position={isMobile ? [0, 0.8, 0] : [0, 1, 0]} {...props} />;
-}
-
-// Mechanical Keyboard 3D Model
-function MechanicalKeyboard({ isMobile, ...props }: any) {
-  const { scene } = useGLTF('/keyboard.glb');
-  return <primitive object={scene} scale={isMobile ? 1.3 : 1.0} position={isMobile ? [0, 2.0, 0] : [0, 2, 0]} {...props} />;
-}
-
-// Gaming Headphone 3D Model
-function GamingHeadphone({ isMobile, ...props }: any) {
-  const { scene } = useGLTF('/gaming_headphone.glb');
-  return <primitive object={scene} scale={isMobile ? 24.0 : 20.0} position={isMobile ? [0, 0.3, 0] : [0, -1, 0]} {...props} />;
-}
-// Gaming PC 3D Model with Animation
-function GamingPC({ isMobile, ...props }: any) {
-  const { scene } = useGLTF('/pc_gamer_animation.glb');
-  return <primitive object={scene} scale={isMobile ? 9.0 : 7.0} position={isMobile ? [0, 0.2, 0] : [0, -0.3, 0]} {...props} />;
-}
-// ==================== END 3D MODEL COMPONENTS ====================
-
-// ==================== DATA CONFIGURATION ====================
-// Category data with images and hover colors
-const categories = [
-  { name: 'Laptop / PC', image: '/laptop.jpg', hoverColor: 'rgba(59, 130, 246, 0.1)' },
-  { name: 'Printer', image: '/Printer.png', hoverColor: 'rgba(16, 185, 129, 0.1)' },
-  { name: 'Keyboard', image: '/Keyboard.png', hoverColor: 'rgba(139, 92, 246, 0.1)' },
-  { name: 'Mouse', image: '/Mouse.jpeg', hoverColor: 'rgba(245, 101, 101, 0.1)' },
-  { name: 'Monitor', image: '/Monitor.jpg', hoverColor: 'rgba(251, 191, 36, 0.1)' },
-  { name: 'CCTV / Analog', image: '/CCTV.jpg', hoverColor: 'rgba(236, 72, 153, 0.1)' },
-  { name: 'Headphones', image: '/Headphones.jpg', hoverColor: 'rgba(6, 182, 212, 0.1)' },
-  { name: 'Refurbished', image: '/Refurbished.jpg', hoverColor: 'rgba(34, 197, 94, 0.1)' },
+/* ── PALETTE ─────────────────────────────────────────────── */
+const PAGE = '#F6F5F1';   // warm cream page bg
+const WHITE = '#FFFFFF';
+const NAVY = '#1C2B4A';   // primary dark accent
+const ORANGE = '#E85D04';   // CTA orange (same warmth as LogiCraft blue but orange)
+const DARK = '#0D1521';   // hero overlay / dark sections
+const TEXT = '#111827';
+const MUTED = '#6B7280';
+const LIGHT = '#ECEAE5';   // alternating section bg
+const BORDER = '#E5E3DE';
+
+/* ── STATIC DATA ──────────────────────────────────────────── */
+
+const HOW_STEPS = [
+  { n: '01', title: 'Browse & Choose', desc: 'Pick from 500+ products and 10+ service categories.', emoji: '🛍️' },
+  { n: '02', title: 'Book or Order', desc: 'Seamless booking for repairs or instant checkout for products.', emoji: '📋' },
+  { n: '03', title: 'Expert Execution', desc: 'Certified technicians handle everything with precision.', emoji: '⚙️' },
+  { n: '04', title: 'Deliver & Delight', desc: 'Receive your product or repaired device — fully tested.', emoji: '🚀' },
 ];
 
-// ==================== END DATA CONFIGURATION ====================
+const REVIEWS = [
+  { name: 'Amit Sharma', role: 'Gamer & Streamer', text: 'Techverse built my dream rig. Flawless execution and amazing support from start to finish.' },
+  { name: 'Priya Menon', role: 'UI/UX Designer', text: 'My laptop was fixed in under 3 hours. Genuine parts, honest pricing — I won\'t go anywhere else.' },
+  { name: 'Rajan Pillai', role: 'Software Engineer', text: 'The custom PC build advice was exceptional. They really know their hardware inside and out.' },
+];
 
-// ==================== ANIMATED CATEGORY CARD COMPONENT ====================
-const AnimatedCategoryCard = ({ category }) => {
-  const navigate = useNavigate();
-  const [hovered, setHovered] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+const MARKS = ['Gaming PCs', 'Laptop Repair', 'Components', 'Peripherals', 'Data Recovery', 'CCTV Install', 'Networking', 'Smart Home', 'Monitors', 'Custom Builds', 'Refurbished PCs', 'PC Accessories'];
 
-  // Check if device is mobile
+/* ── ANIMATED COUNTER ────────────────────────────────────── */
+function Counter({ to, suffix }: { to: number; suffix: string }) {
+  const [n, setN] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 900);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      obs.disconnect();
+      let start: number;
+      const run = (ts: number) => {
+        if (!start) start = ts;
+        const p = Math.min((ts - start) / 1800, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        setN(Math.floor(ease * to));
+        if (p < 1) requestAnimationFrame(run);
+        else setN(to);
+      };
+      requestAnimationFrame(run);
+    }, { threshold: 0.4 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [to]);
+  return (
+    <div ref={ref} style={{ fontFamily: 'Poppins,Manrope,sans-serif', fontSize: 'clamp(36px,5vw,64px)', fontWeight: 800, color: NAVY, letterSpacing: '-0.04em', lineHeight: 1 }}>
+      {to >= 1000 ? (n / 1000).toFixed(0) + 'K' : n}{suffix}
+    </div>
+  );
+}
+
+/* ── SCROLL REVEAL ───────────────────────────────────────── */
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [v, setV] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setV(true); obs.disconnect(); } }, { threshold: 0.08 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return { ref, v };
+}
+function rev(v: boolean, d = 0): React.CSSProperties {
+  return { opacity: v ? 1 : 0, transform: v ? 'translateY(0)' : 'translateY(48px)', transition: `opacity .9s cubic-bezier(.16,1,.3,1) ${d}s, transform .9s cubic-bezier(.16,1,.3,1) ${d}s` };
+}
+
+/* Strips Docker-internal hostnames from image URLs so they load in the browser */
+function sanitizeImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  // If it's an absolute URL with the Docker internal port (e.g. http://backend:8000/media/...), extract only the /media/... path
+  try {
+    const parsed = new URL(url);
+    if (parsed.port === '8000' || !parsed.hostname.includes('.')) {
+      return parsed.pathname + parsed.search; // returns /media/...
+    }
+  } catch {
+    // Not a valid absolute URL — assume it's already a relative path
+  }
+  return url;
+}
+
+/* ───────────────────────────────────────────────────────
+   MOUSE SCROLLYTELLING — Canvas-based scroll-linked image sequence
+   240 frames: mouse explodes → floating parts → reassembles
+─────────────────────────────────────────────────────── */
+const TOTAL_FRAMES = 240;
+const FRAME_DIR = '/mouse_frames_webp';
+
+function padFrame(n: number) {
+  return String(n).padStart(3, '0');
+}
+
+const COPY_BEATS = [
+  { from: 0, to: 0.12, headline: 'Engineered to Perfection.', sub: 'Every component hand-selected for feel, speed, and longevity.' },
+  { from: 0.18, to: 0.35, headline: '7 Independent Layers.', sub: 'Optical sensor, PCB, scroll encoder, side buttons — each isolated for zero interference.' },
+  { from: 0.40, to: 0.58, headline: 'Physics at 8000 DPI.', sub: 'A sensor that reads 8,000 position samples per second. Precision so accurate, it feels like thought.' },
+  { from: 0.62, to: 0.80, headline: 'Rebuilt. For You.', sub: 'Every part reassembled by hand. Tested at 20 million clicks before it reaches yours.' },
+  { from: 0.85, to: 1.00, headline: 'The TechVerse Standard.', sub: "We never sell a product we wouldn't hand to our own engineers." },
+];
+
+// Hoisted out of React lifecycle! Preserves ~50MB of decoded RAM across route changes instantly.
+const GLOBAL_BITMAP_CACHE = new Array(TOTAL_FRAMES).fill(null);
+let GLOBAL_DECODED_COUNT = 0;
+
+function MouseScrollytelling() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Bind to global cache!
+  const bitmaps = useRef<(ImageBitmap | null)[]>(GLOBAL_BITMAP_CACHE);
+  const drawCache = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const rafId = useRef<number>(0);
+  const pendingIdx = useRef<number>(0);
+  const currentIdx = useRef<number>(-1);
+  const ready = useRef(false);
+  const loadStarted = useRef(false);
+
+  const [loadProgress, setLoadProgress] = useState(
+    Math.round((GLOBAL_DECODED_COUNT / TOTAL_FRAMES) * 100)
+  );
+  const [beat, setBeat] = useState<typeof COPY_BEATS[0] | null>(COPY_BEATS[0]);
+  const [beatVisible, setBeatVisible] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Spring animation configuration
-  const [props, api] = useSpringWeb(() => ({
-    scale: 1,
-    rotateX: 0,
-    rotateY: 0,
-    rotateZ: 0,
-    config: { mass: 0.8, tension: 280, friction: 35 },
-  }));
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    // On mobile, the animation trigger must wait until the card actually sits cleanly under the fixed navbar
+    // instead of firing immediately when the hidden top edge reaches the absolute top of the screen.
+    offset: isMobile ? ['start 12vh', 'end end'] : ['start start', 'end end'],
+  });
 
-  // Handle mouse movement for 3D tilt effect
-  const handleMouseMove = (e) => {
-    if (!hovered || isMobile) return;
-    const { clientX, clientY, currentTarget } = e;
-    const { left, top, width, height } = currentTarget.getBoundingClientRect();
-    const centerX = left + width / 2;
-    const centerY = top + height / 2;
-    const rotateX = (clientY - centerY) / 8;
-    const rotateY = (centerX - clientX) / 8;
-    const rotateZ = (clientX - centerX) / 25;
+  // ── Size canvas once; cache geometry ─────────────────────────────
+  function sizeCanvas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // Cap DPR at 1.5 — above that, the visual gain is imperceptible but memory doubles
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const cw = canvas.offsetWidth;
+    const ch = canvas.offsetHeight;
+    if (cw === 0 || ch === 0) return;
 
-    api.start({
-      rotateX: Math.max(-25, Math.min(25, rotateX)),
-      rotateY: Math.max(-25, Math.min(25, rotateY)),
-      rotateZ: Math.max(-10, Math.min(10, rotateZ))
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+    const ctx = canvas.getContext('2d', { alpha: false })!; // alpha:false = faster compositing
+    ctx.scale(dpr, dpr);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Find first available bitmap to calculate geometry
+    const firstBm = bitmaps.current.find(b => b !== null);
+    if (firstBm) {
+      const bw = firstBm.width;
+      const bh = firstBm.height;
+      // Use constrained scaling with a slight zoom (1.2x)
+      // Since the raw image mouse is positioned at the bottom, we anchor the drawing to the bottom
+      const scale = Math.min(cw / bw, ch / bh) * 1.25;
+      drawCache.current = {
+        x: (cw - bw * scale) / 2,     // center horizontally
+        y: ch - (bh * scale) * 0.95,  // anchor to bottom
+        w: bw * scale,
+        h: bh * scale,
+      };
+    }
+  }
+
+  // ── Fast draw — single drawImage call, no layout read ────────────
+  function renderFrame(idx: number) {
+    const canvas = canvasRef.current;
+
+    // Fallback to highest loaded frame if exact scroll index isn't decoded yet (progressive enhancement)
+    let safeIdx = idx;
+    while (safeIdx >= 0 && !bitmaps.current[safeIdx]) {
+      safeIdx--;
+    }
+
+    const bm = bitmaps.current[safeIdx];
+    const geo = drawCache.current;
+    if (!canvas || !bm || !geo) return;
+
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+    ctx.drawImage(bm, geo.x, geo.y, geo.w, geo.h);
+  }
+
+  // ── rAF render loop — decoupled from scroll events ───────────────
+  function scheduleRender(idx: number) {
+    pendingIdx.current = idx;
+    cancelAnimationFrame(rafId.current);
+    rafId.current = requestAnimationFrame(() => {
+      if (pendingIdx.current !== currentIdx.current) {
+        renderFrame(pendingIdx.current);
+        currentIdx.current = pendingIdx.current;
+      }
     });
-  };
+  }
 
-  const handleMouseEnter = () => {
+  // ── Progressive Preload Pipeline — deferred until section near viewport ──
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    // IntersectionObserver: only start loading when section is 200px from viewport
+    const startLoading = () => {
+      if (loadStarted.current) return;
+      loadStarted.current = true;
+
+      // INSTANT CACHE HIT: If already decoded in a previous session, skip fetch entirely!
+      if (GLOBAL_DECODED_COUNT >= TOTAL_FRAMES) {
+        setLoadProgress(100);
+        ready.current = true;
+        sizeCanvas();
+        renderFrame(currentIdx.current > -1 ? currentIdx.current : 0);
+        return;
+      }
+
+      setLoadProgress(Math.round((GLOBAL_DECODED_COUNT / TOTAL_FRAMES) * 100));
+      const total = TOTAL_FRAMES;
+      let nextIdxToQueue = GLOBAL_DECODED_COUNT;
+      // 45 concurrent workers — fills pipe faster, modern browsers handle 6+ parallel fetches
+      const WORKERS = 45;
+      let isMounted = true;
+
+      const decodeNext = async () => {
+        if (!isMounted || nextIdxToQueue >= total) return;
+        const i = nextIdxToQueue++;
+        try {
+          const res = await fetch(`${FRAME_DIR}/ezgif-frame-${padFrame(i + 1)}.webp`, { cache: 'force-cache' });
+          const blob = await res.blob();
+          // premultiplyAlpha:'none' skips alpha premultiplication — faster decode for opaque JPEGs
+          bitmaps.current[i] = await createImageBitmap(blob, { premultiplyAlpha: 'none', resizeQuality: 'medium' });
+
+          if (!ready.current) {
+            ready.current = true;
+            sizeCanvas();
+          }
+
+          if (currentIdx.current === i || (i === 0 && currentIdx.current <= 0)) {
+            renderFrame(i);
+            if (currentIdx.current < 0) currentIdx.current = 0;
+          }
+        } catch { /* Suppress broken frame errors */ }
+
+        GLOBAL_DECODED_COUNT++;
+        // Dispatch a global event so the VaultPreloader can track the progress remotely!
+        const percentage = Math.round((GLOBAL_DECODED_COUNT / total) * 100);
+        setLoadProgress(percentage);
+        window.dispatchEvent(new CustomEvent('mouse-scroll-progress', { detail: { progress: percentage } }));
+
+        if (GLOBAL_DECODED_COUNT === total) { }
+        decodeNext();
+      };
+
+      for (let k = 0; k < WORKERS; k++) decodeNext();
+
+      const ro = new ResizeObserver(() => { sizeCanvas(); renderFrame(currentIdx.current); });
+      if (canvasRef.current) ro.observe(canvasRef.current);
+
+      return () => {
+        isMounted = false;
+        ro.disconnect();
+        cancelAnimationFrame(rafId.current);
+      };
+    };
+
+    // Start loading immediately if already in viewport, else wait until 300px away
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        startLoading();
+        io.disconnect();
+      }
+    }, { rootMargin: '300px' });
+    io.observe(section);
+
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
+  // ── Map scroll → frame index via rAF ─────────────────────────────
+  useMotionValueEvent(scrollYProgress, 'change', (progress) => {
+    const idx = Math.min(Math.floor(progress * TOTAL_FRAMES), TOTAL_FRAMES - 1);
+    if (ready.current) scheduleRender(idx);
+
+    const activeBeat = COPY_BEATS.find(b => progress >= b.from && progress <= b.to) ?? null;
+    setBeat(activeBeat);
+    setBeatVisible(!!activeBeat);
+  });
+
+  const beatIndex = beat ? COPY_BEATS.indexOf(beat) : -1;
+
+  return (
+    <div style={{ padding: '0 2vw 4vw 2vw', background: PAGE }}>
+      <section
+        ref={sectionRef}
+        style={{
+          position: 'relative',
+          height: '2800px', // Extended timeline so animation and text beats read slowly and naturally
+        }}
+      >
+        {/* ── Floating Sticky Viewport Card ── */}
+        <div className="scrolly-card" style={{
+          position: 'sticky',
+          top: isMobile ? '12vh' : '10vh',     // Push lower on mobile to comfortably clear the fixed Navigation bar
+          height: isMobile ? '90vh' : '80vh',  // Give more vertical room on mobile
+          background: '#0B0E14',
+          borderRadius: isMobile ? '24px' : '32px',
+          overflow: 'hidden',
+          boxShadow: '0 20px 80px rgba(0,0,0,0.25)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row', // Stack instead of slice on mobile
+          alignItems: isMobile ? 'stretch' : 'center', // Fix Desktop regression
+          padding: isMobile ? '0px' : '0 5vw', // Zero padding on mobile to maximize edge-to-edge mouse size
+          gap: isMobile ? '24px' : '3vw',
+        }}>
+
+          {/* ── Premium Tech Grid & Orbs Background ── */}
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.1, pointerEvents: 'none',
+            backgroundSize: '80px 80px',
+            backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`
+          }} />
+          <div style={{ position: 'absolute', top: '10vh', left: '-5vw', width: '50vw', height: '50vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,93,4,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: '10vh', right: '-10vw', width: '60vw', height: '60vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,44,79,0.1) 0%, transparent 60%)', pointerEvents: 'none' }} />
+
+
+          {/* ── LEFT/TOP: Canvas Region ── */}
+          <div className="scrolly-canvas" style={{
+            flex: isMobile ? '0 0 45%' : '0 0 48%', // Fixed height proportion
+            height: isMobile ? '45%' : '56vh',
+            width: isMobile ? '100%' : undefined, // Fix desktop regression
+            borderRadius: isMobile ? '0px' : '28px', // Straight edges on mobile so it seamlessly touches the card borders
+            overflow: 'hidden',
+            background: '#000000', // Matches the raw jpeg exactly
+            border: '1px solid rgba(255,255,255,0.05)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.3)',
+            position: 'relative',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {/* Canvas */}
+            <canvas
+              ref={canvasRef}
+              style={{ width: '100%', height: '100%', display: 'block' }}
+            />
+
+            {/* Subtle inner shadows to blend the sharp boundaries of the image frame */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '25%', background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, transparent 100%)', pointerEvents: 'none' }} />
+
+            {/* Loading bar overlay removed for seamless background loading */}
+
+            {/* Frame badge */}
+            <div style={{ position: 'absolute', bottom: 16, left: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: ORANGE, display: 'block', boxShadow: `0 0 6px ${ORANGE}`, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'monospace' }}>Live Disassembly</span>
+            </div>
+          </div>
+
+          {/* ── RIGHT/BOTTOM: Animated copy panel ── */}
+          <div className="scrolly-text" style={{
+            flex: 1,
+            width: isMobile ? '100%' : undefined, // Fix desktop regression
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: isMobile ? '0 24px 24px' : '0 2vw 0 1vw', // Safely pad the interior since the container wrapper has 0 padding on mobile now
+            position: 'relative',
+          }}>
+            {/* Section label */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: isMobile ? 12 : 36 }}>
+              <div style={{ width: 28, height: 2, background: ORANGE, borderRadius: 2 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: ORANGE, textTransform: 'uppercase', letterSpacing: '0.16em' }}>
+                Inside the Machine
+              </span>
+            </div>
+
+            {/* Step dots */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: isMobile ? 20 : 40 }}>
+              {COPY_BEATS.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: i === beatIndex ? 24 : 6,
+                    height: 6,
+                    borderRadius: 3,
+                    background: i === beatIndex ? ORANGE : 'rgba(0,0,0,0.15)',
+                    transition: 'all 0.4s cubic-bezier(.16,1,.3,1)',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Animated text — fades and slides per beat */}
+            <div style={{ position: 'relative', minHeight: 220, overflow: 'hidden' }}>
+              {COPY_BEATS.map((b, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: i === 0 ? 'relative' : 'absolute',
+                    top: 0, left: 0, width: '100%',
+                    opacity: beatIndex === i ? 1 : 0,
+                    transform: `translateY(${beatIndex === i ? '0px' : beatIndex > i ? '-24px' : '24px'})`,
+                    transition: 'opacity 0.55s cubic-bezier(.16,1,.3,1), transform 0.55s cubic-bezier(.16,1,.3,1)',
+                    pointerEvents: beatIndex === i ? 'auto' : 'none',
+                  }}
+                >
+                  {/* Step number */}
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: ORANGE,
+                    letterSpacing: '0.1em',
+                    display: 'block',
+                    marginBottom: 18,
+                    opacity: 0.8,
+                  }}>
+                    {String(i + 1).padStart(2, '0')} / {String(COPY_BEATS.length).padStart(2, '0')}
+                  </span>
+
+                  {/* Headline */}
+                  <h2 className="scrolly-headline" style={{
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 900,
+                    fontSize: isMobile ? '28px' : 'clamp(28px, 3.2vw, 52px)',
+                    color: WHITE, // Inverted for dark mode
+                    letterSpacing: '-0.03em',
+                    lineHeight: 1.05,
+                    marginBottom: isMobile ? 12 : 20,
+                    textShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                  }}>
+                    {b.headline}
+                  </h2>
+
+                  {/* Divider */}
+                  <div style={{ width: 48, height: 3, background: `linear-gradient(90deg, ${ORANGE}, rgba(232,93,4,0.2))`, borderRadius: 2, marginBottom: isMobile ? 12 : 20 }} />
+
+                  {/* Sub copy */}
+                  <p style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: 'clamp(14px, 1.1vw, 18px)',
+                    color: 'rgba(255,255,255,0.65)', // Inverted for dark mode
+                    lineHeight: 1.8,
+                    fontWeight: 400,
+                    maxWidth: 400,
+                  }}>
+                    {b.sub}
+                  </p>
+                </div>
+              ))}
+
+              {/* "Scroll to explore" shown when no beat is active */}
+              {beatIndex === -1 && (
+                <div style={{ opacity: 0.5, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 1, height: 32, background: WHITE }} />
+                  <span style={{ fontSize: 12, color: WHITE, fontWeight: 600, letterSpacing: '0.06em' }}>Scroll to explore</span>
+                </div>
+              )}
+            </div>
+
+            {/* Scroll progress track */}
+            <div style={{ marginTop: isMobile ? 24 : 48, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                <motion.div style={{
+                  height: '100%',
+                  background: `linear-gradient(90deg, ${ORANGE}, rgba(232,93,4,0.3))`,
+                  borderRadius: 2,
+                  scaleX: scrollYProgress,
+                  transformOrigin: 'left',
+                }} />
+              </div>
+              <span style={{ fontSize: 11, color: MUTED, fontWeight: 600, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+                {beatIndex >= 0 ? beatIndex + 1 : 0} of {COPY_BEATS.length}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function HolographicCategoryCard({ cat, index, isTrending, navigate, isMobile }: any) {
+  const x = useMotionValue(0.5);
+  const y = useMotionValue(0.5);
+
+  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 20 });
+  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 20 });
+
+  const rotateX = useTransform(mouseYSpring, [0, 1], ["25deg", "-25deg"]);
+  const rotateY = useTransform(mouseXSpring, [0, 1], ["-25deg", "25deg"]);
+  const glareX = useTransform(mouseXSpring, [0, 1], ["0%", "100%"]);
+  const glareY = useTransform(mouseYSpring, [0, 1], ["0%", "100%"]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // If mobile, ignore the heavy 3D hover physics for better performance/ux
     if (isMobile) return;
-    setHovered(true);
-    api.start({ scale: 1.08 });
+    const rect = e.currentTarget.getBoundingClientRect();
+    x.set((e.clientX - rect.left) / rect.width);
+    y.set((e.clientY - rect.top) / rect.height);
   };
 
   const handleMouseLeave = () => {
     if (isMobile) return;
-    setHovered(false);
-    api.start({ scale: 1, rotateX: 0, rotateY: 0, rotateZ: 0 });
+    x.set(0.5);
+    y.set(0.5);
   };
 
-  const handleCategoryClick = () => {
-    const target = encodeURIComponent(category.name);
-    navigate(`/store?category=${target}`);
-  };
+  let IconMatch = ComputerIcon;
+  const lname = (cat.name || '').toLowerCase();
+  if (lname.includes('audio') || lname.includes('headphone')) IconMatch = HeadphonesIcon;
+  else if (lname.includes('phone') || lname.includes('tablet')) IconMatch = PhoneAndroidIcon;
+  else if (lname.includes('laptop')) IconMatch = LaptopIcon;
+  else if (lname.includes('camera') || lname.includes('cctv')) IconMatch = CameraAltIcon;
+  else if (lname.includes('network') || lname.includes('router')) IconMatch = RouterIcon;
+  else if (lname.includes('storage') || lname.includes('drive')) IconMatch = StorageIcon;
 
   return (
-    <CategoryItemWrapper>
-      <AnimatedCardContainer
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '10px' : '20px', flexShrink: 0, margin: isMobile ? '10px 0' : '20px 0' }}>
+      <motion.div
         onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={handleCategoryClick}
-        style={isMobile ? {} : {
-          transform: 'perspective(1200px)',
-          scale: props.scale,
-          rotateX: props.rotateX.to(val => `${val}deg`),
-          rotateY: props.rotateY.to(val => `${val}deg`),
-          rotateZ: props.rotateZ.to(val => `${val}deg`),
+        onClick={() => navigate(`/store?category=${encodeURIComponent(cat.name)}`)}
+        style={{
+          perspective: 1200,
+          /* Normalize mobile widths and heights so no single card monopolizes the screen */
+          width: isMobile ? '160px' : (isTrending ? '400px' : '300px'),
+          height: isMobile ? '180px' : '340px',
+          cursor: 'pointer'
         }}
       >
-        {category.image && (
-          <ProductImage
-            src={category.image}
-            alt={category.name}
-            style={{
-              opacity: hovered ? 1 : 0.95,
-              transform: hovered && !isMobile ? 'translateZ(6px) scale(1.02)' : 'translateZ(0px) scale(1)',
-              filter: hovered && !isMobile ? 'brightness(0.95) contrast(1.05)' : 'brightness(0.85) contrast(1.08)'
-            }}
-          />
+        <motion.div
+          style={{
+            width: '100%', height: '100%',
+            rotateX: isMobile ? 0 : rotateX, rotateY: isMobile ? 0 : rotateY, transformStyle: "preserve-3d", position: "relative",
+            borderRadius: isMobile ? "20px" : "32px",
+            background: isTrending ? `linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,90,31,0.02) 100%)` : `rgba(255,255,255,0.02)`,
+            border: '2px solid rgba(0,0,0,0.1)',
+            backdropFilter: 'blur(30px)',
+            boxShadow: isTrending ? `0 30px 60px rgba(13,21,33,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 40px rgba(255,90,31,0.1)` : `0 20px 40px rgba(0,0,0,0.1)`,
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+            overflow: 'hidden',
+            zIndex: isTrending ? 10 : 1
+          }}
+        >
+          {isTrending && <motion.div style={{ position: 'absolute', inset: 0, opacity: 0.9, background: `radial-gradient(circle at var(--gx) var(--gy), rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)`, '--gx': glareX, '--gy': glareY, pointerEvents: 'none' } as any} />}
+          {!isTrending && <motion.div style={{ position: 'absolute', inset: 0, opacity: 0.2, background: `radial-gradient(circle at var(--gx) var(--gy), rgba(0,0,0,0.1) 0%, rgba(255,255,255,0) 50%)`, '--gx': glareX, '--gy': glareY, pointerEvents: 'none' } as any} />}
+
+          <div style={{ transform: isMobile ? "none" : "translateZ(60px)", width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            {cat.top_image ? (
+              <img src={sanitizeImageUrl(cat.top_image)} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block', mixBlendMode: 'multiply' }} />
+            ) : (
+              <div style={{ width: isMobile ? '50px' : '80px', height: isMobile ? '50px' : '80px', borderRadius: isMobile ? '16px' : '24px', background: isTrending ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)', border: isTrending ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isTrending ? '0 10px 20px rgba(0,0,0,0.3)' : 'none' }}>
+                <IconMatch sx={{ color: isTrending ? WHITE : ORANGE, fontSize: isMobile ? '24px' : '40px' }} />
+              </div>
+            )}
+
+            {isTrending && (
+              <motion.div
+                initial={{ opacity: 0.8, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1.05 }}
+                transition={{ repeat: Infinity, direction: 'alternate', duration: 1.5, ease: "easeInOut" }}
+                style={{ position: 'absolute', top: isMobile ? 12 : 20, right: isMobile ? 12 : 20, background: 'linear-gradient(90deg, #FF5A1F, #FF8C00)', padding: isMobile ? '4px 8px' : '8px 16px', borderRadius: '100px', color: WHITE, fontSize: isMobile ? '9px' : '12px', fontWeight: 900, letterSpacing: '0.06em', boxShadow: '0 8px 24px rgba(255,90,31,0.5)', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                #1 TRENDING
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+
+      <div style={{ textAlign: 'center' }}>
+        <h3 style={{ fontFamily: 'Poppins, sans-serif', color: TEXT, fontSize: isMobile ? (isTrending ? '15px' : '13px') : (isTrending ? '28px' : '20px'), fontWeight: 800, margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' }}>
+          {cat.name}
+        </h3>
+        {cat.recent_sales > 0 && isTrending && (
+          <div style={{ color: ORANGE, fontSize: isMobile ? '10px' : '14px', marginTop: '6px', fontWeight: 700, letterSpacing: '0.02em' }}>
+            {cat.recent_sales} units initialized
+          </div>
         )}
 
-        <CardGlow
-          style={{
-            opacity: hovered && !isMobile ? 1 : 0,
-            background: hovered ? category.hoverColor : 'rgba(255, 255, 255, 0.05)'
-          }}
-        />
-
-        <CategoryOverlay style={{ opacity: hovered && !isMobile ? 0.6 : 0 }} />
-      </AnimatedCardContainer>
-
-      <CategoryName
-        style={{
-          opacity: hovered && !isMobile ? 1 : 0.7,
-          transform: hovered && !isMobile ? 'translateY(0px)' : 'translateY(10px)',
-          color: hovered && !isMobile ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.5)'
-        }}
-      >
-        {category.name}
-      </CategoryName>
-    </CategoryItemWrapper>
+      </div>
+    </div>
   );
-};
+}
 
-// ==================== END ANIMATED CATEGORY CARD COMPONENT ====================
+/* ═══════════════════════════════════════════════════════════
+   MAIN COMPONENT
+═══════════════════════════════════════════════════════════ */
+export const LandingPage: React.FC = () => {
+  const {
+    loading: storeLoading,
+    error: storeError,
+    trendingCategories: productTrendingCategories,
+    fetchTrendingCategories: fetchProductTrendingCategories
+  } = useProductStore();
 
-// ==================== DATA CONFIGURATION ====================
-// Product categories for "Shop by Category" section
-const productCategories = [
-  { name: 'Laptop / PC', image: '/laptop.jpg', hoverColor: 'rgba(59, 130, 246, 0.1)' },
-  { name: 'Printer', image: '/Printer.png', hoverColor: 'rgba(16, 185, 129, 0.1)' },
-  { name: 'Keyboard', image: '/Keyboard.png', hoverColor: 'rgba(139, 92, 246, 0.1)' },
-  { name: 'Mouse', image: '/Mouse.jpeg', hoverColor: 'rgba(245, 101, 101, 0.1)' },
-  { name: 'Monitor', image: '/Monitor.jpg', hoverColor: 'rgba(251, 191, 36, 0.1)' },
-  { name: 'CCTV / Analog', image: '/CCTV.jpg', hoverColor: 'rgba(236, 72, 153, 0.1)' },
-  { name: 'Headphones', image: '/Headphones.jpg', hoverColor: 'rgba(6, 182, 212, 0.1)' },
-  { name: 'Refurbished', image: '/Refurbished.jpg', hoverColor: 'rgba(34, 197, 94, 0.1)' },
-];
+  const {
+    categories: serviceCategories,
+    trendingCategories,
+    fetchTrendingCategories,
+    fetchCategories,
+    loading: svcLoading,
+    error: svcError
+  } = useServiceStore();
 
-// ==================== END DATA CONFIGURATION ====================
-
-// ==================== HELPER FUNCTION FOR SERVICE ICONS ====================
-const getCategoryIcon = (categoryName: string) => {
-  const name = categoryName.toLowerCase();
-  if (name.includes('computer') || name.includes('laptop') || name.includes('pc')) {
-    return <ComputerIcon />;
-  } else if (name.includes('printer')) {
-    return <PrintIcon />;
-  } else if (name.includes('camera') || name.includes('cctv')) {
-    return <CameraAltIcon />;
-  } else if (name.includes('headphone') || name.includes('audio')) {
-    return <HeadphonesIcon />;
-  } else if (name.includes('phone') || name.includes('mobile')) {
-    return <PhoneAndroidIcon />;
-  } else if (name.includes('tv') || name.includes('monitor')) {
-    return <TvIcon />;
-  } else if (name.includes('network') || name.includes('router')) {
-    return <RouterIcon />;
-  } else {
-    return <BuildIcon />;
-  }
-};
-
-// ==================== MAIN LANDING PAGE COMPONENT ====================
-export const LandingPage = () => {
-  // Navigation
   const navigate = useNavigate();
+  const [products, setProducts] = useState<any[]>([]);
+  const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState<number | null>(null);
+  const [prodCats, setProdCats] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
 
-  // Service store for dynamic services (renamed to avoid conflict)
-  const serviceCategories = useServiceStore((state) => state.categories);
-  const fetchCategories = useServiceStore((state) => state.fetchCategories);
-
-  // State for 3D model carousel
-  const [currentModel, setCurrentModel] = useState(0);
-  const [animating, setAnimating] = useState(false);
-  const models = [GamingLaptop, MechanicalKeyboard, GamingHeadphone, GamingPC];
-
-  const muiTheme = useTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
-
-  // Spring animation for model transitions
-  const [slideProps, slideApi] = useSpring3d(() => ({
-    position: [0, -0.5, 0],
-    config: { mass: 1, tension: 170, friction: 26 },
-  }));
-
-  // Continuous rotation animation
-  const { rotation } = useSpring3d({
-    from: { rotation: [0, 0, 0] },
-    to: { rotation: [0, Math.PI * 2, 0] },
-    loop: true,
-    config: { duration: 10000, easing: t => t },
-  });
-
-  const DISPLAY_TIME = 5000;
-
-  // Animate model transitions
-  const runAnimation = useCallback(async (direction) => {
-    if (animating) return;
-    setAnimating(true);
-    const isNext = direction === 'next';
-    const outPosition = isNext ? -20 : 20;
-    const inPosition = isNext ? 20 : -20;
-    await slideApi.start({ to: { position: [outPosition, -0.5, 0] } });
-    setCurrentModel(current => (isNext ? (current + 1) : (current - 1 + models.length)) % models.length);
-    slideApi.set({ position: [inPosition, -0.5, 0] });
-    await slideApi.start({ to: { position: [0, -0.5, 0] } });
-    setAnimating(false);
-  }, [animating, slideApi, models.length]);
-
-  // Auto-advance carousel
-  useEffect(() => {
-    if (animating) return;
-    const timer = setTimeout(() => runAnimation('next'), DISPLAY_TIME);
-    return () => clearTimeout(timer);
-  }, [animating, currentModel, runAnimation]);
-
-  // Fetch service categories on component mount
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  // Get top 5 categories for services section
-  const topCategories = serviceCategories.slice(0, 5);
-
-  // Handler for service card clicks
-  const handleServiceClick = (categoryId: number) => {
-    navigate(`/services/request/${categoryId}`);
-  };
-
-  // Handler for More Services button
-  const handleMoreServicesClick = () => {
-    navigate('/services');
-  };
-
-  const CurrentModelComponent = models[currentModel];
-
-  // Optimization: Track visibility of hero section
-  const [heroVisible, setHeroVisible] = useState(true);
-  const heroRef = useRef<HTMLDivElement>(null);
+  const catScrollRef = useRef<HTMLDivElement>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setHeroVisible(entry.isIntersecting);
-      },
-      { threshold: 0 }
-    );
-
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
-    }
-
-    return () => {
-      if (heroRef.current) {
-        observer.unobserve(heroRef.current);
-      }
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    let animationFrameId: number;
+    let lastTime = performance.now();
+    let accumulatedTime = 0;
+
+    const scrollLoop = (time: number) => {
+      const deltaTime = time - lastTime;
+      lastTime = time;
+      accumulatedTime += deltaTime;
+
+      // Only push a pixel roughly every 30ms to maintain consistent speed
+      // across 60Hz, 120Hz, and 144Hz monitors, without jitter.
+      if (accumulatedTime > 30) {
+        if (catScrollRef.current && catScrollRef.current.dataset.paused !== "true") {
+          catScrollRef.current.scrollLeft += 1;
+          if (catScrollRef.current.scrollLeft >= catScrollRef.current.scrollWidth - catScrollRef.current.clientWidth) {
+            catScrollRef.current.scrollLeft = 0;
+          }
+        }
+        accumulatedTime = 0;
+      }
+
+      if (isAutoScrolling) {
+        animationFrameId = requestAnimationFrame(scrollLoop);
+      }
+    };
+
+    if (isAutoScrolling && !isMobile) {
+      animationFrameId = requestAnimationFrame(scrollLoop);
+    }
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isAutoScrolling]);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+  useEffect(() => {
+    fetchTrendingCategories();
+    fetchProductTrendingCategories();
+    Promise.all([
+      apiClient.get('/api/products/').catch(() => ({ data: [] })),
+      apiClient.get('/api/categories/').catch(() => ({ data: [] })),
+    ]).then(([pr, cr]) => {
+      const prods = Array.isArray(pr.data) ? pr.data : (pr.data?.results ?? []);
+      const cats = Array.isArray(cr.data) ? cr.data : (cr.data?.results ?? []);
+      setProducts(prods);
+      setProdCats(cats);
+    });
+  }, []);
+
+  const svcs = serviceCategories.slice(0, 6);
+  const cats = prodCats.slice(0, 10);
+  const featProds = products.slice(0, 6);
+
+  const s1 = useReveal();
+  const s2 = useReveal();
+  const s3 = useReveal();
+  const s4 = useReveal();
+  const s5 = useReveal();
+  const s6 = useReveal();
+
+  const handleSearch = () => {
+    if (search.trim()) navigate(`/store?search=${encodeURIComponent(search)}`);
+    else navigate('/store');
+  };
+
   return (
-    <ThemeProvider theme={theme}>
-      <PageWrapper>
+    <>
+      <VaultPreloader />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 
-        {/* ==================== HERO SECTION ==================== */}
-        <HeroSection ref={heroRef}>
-          {/* Navigation Bar */}
-          <Nav>
-            {/* Logo and navigation removed - using main NavBar component */}
-          </Nav>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: ${PAGE}; font-family: 'Poppins', 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 
-          {/* Hero Content */}
-          <HeroContainer>
-            {/* Left Side - Text & CTAs */}
-            <HeroLeft>
-              <HeroTitle>TECHVERSE</HeroTitle>
-              <HeroSubtitle>Your Gateway to Innovation</HeroSubtitle>
-              <ExploreButton>Explore Now</ExploreButton>
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: ${NAVY}; border-radius: 3px; }
 
-              {/* 3D Model Navigation Arrows */}
-              <Box sx={{
-                display: 'flex',
-                gap: 2,
-                marginTop: { xs: 3, md: 4 },
-                marginLeft: { xs: 0, md: '-60px' },
-                justifyContent: { xs: 'center', md: 'flex-start' }
-              }}>
-                <ArrowButton onClick={() => runAnimation('prev')}>
-                  <ArrowBackIosNewIcon sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }} />
-                </ArrowButton>
-                <ArrowButton onClick={() => runAnimation('next')}>
-                  <ArrowForwardIosIcon sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }} />
-                </ArrowButton>
-              </Box>
-            </HeroLeft>
+        /* ── Keyframes ── */
+        @keyframes marquee-left  { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes marquee-right { 0%{transform:translateX(-50%)} 100%{transform:translateX(0)} }
+        @keyframes hero-scale    { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+        @keyframes bounce-in     { 0%{opacity:0;transform:translateY(24px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes slide-up      { 0%{opacity:0;transform:translateY(40px)} 100%{opacity:1;transform:translateY(0)} }
 
-            {/* Right Side - 3D Model Canvas */}
-            <CanvasWrapper>
-              <Canvas
-                frameloop={heroVisible ? "always" : "never"}
-                dpr={[1, 1.5]}
-                style={{ width: '100%', height: '100%', overflow: 'visible' }}
-                camera={{ position: [10, 10, 10], fov: 55 }}
-                gl={{ powerPreference: 'high-performance' }}
+        .track-l { animation: marquee-left  28s linear infinite; display:inline-flex; gap:48px; white-space:nowrap; width:max-content; }
+        .track-r { animation: marquee-right 24s linear infinite; display:inline-flex; gap:48px; white-space:nowrap; width:max-content; }
+        .track-l:hover, .track-r:hover { animation-play-state: paused; }
+
+        /* ══ HERO CARD — the rounded rectangle (LogiCraft key feature) ══ */
+        .hero-card {
+          position: relative;
+          width: calc(100% - 48px);
+          margin: 0 24px;
+          border-radius: 28px;
+          overflow: hidden;
+          min-height: 72vh;
+          display: flex;
+          align-items: center;
+        }
+        @media(max-width: 900px) {
+          .hero-card { 
+            min-height: 0 !important; 
+            width: calc(100% - 24px) !important;
+            margin: 0 12px !important;
+          }
+        }
+        .hero-bg-img {
+          position: absolute; inset: 0;
+          width: 100%; height: 100%;
+          object-fit: cover; object-position: center 25%;
+          animation: hero-scale 16s ease-in-out infinite;
+        }
+        /* Gradient: heavy dark on left, fades out to the right — exactly like LogiCraft */
+        .hero-overlay {
+          position: absolute; inset: 0;
+          background: linear-gradient(
+            100deg,
+            rgba(5,10,20,0.92) 0%,
+            rgba(5,10,20,0.80) 30%,
+            rgba(5,10,20,0.45) 55%,
+            rgba(5,10,20,0.12) 75%,
+            rgba(5,10,20,0.0)  100%
+          );
+        }
+        /* Floating white search card — bottom-left, partially overlapping hero */
+        .hero-search-card {
+          position: absolute;
+          bottom: -1px;
+          left: 48px;
+          background: ${WHITE};
+          border-radius: 20px 20px 0 0;
+          padding: 20px 24px 24px;
+          width: 380px;
+          box-shadow: 0 -4px 40px rgba(0,0,0,0.12);
+          animation: slide-up 1.2s .5s both;
+        }
+        .hero-search-input {
+          display: flex;
+          align-items: center;
+          gap: 0;
+          background: ${PAGE};
+          border-radius: 10px;
+          overflow: hidden;
+          margin-top: 12px;
+        }
+        .hero-search-input input {
+          flex: 1; border: none; outline: none;
+          padding: 13px 16px;
+          font-size: 13px;
+          font-family: 'Poppins', sans-serif;
+          background: transparent;
+          color: ${TEXT};
+        }
+        .hero-search-input button {
+          background: ${ORANGE}; border: none; cursor: pointer;
+          padding: 0 18px; height: 46px; color: ${WHITE};
+          display: flex; align-items: center; gap: 6px;
+          font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 12px;
+          white-space: nowrap;
+          transition: background .25s;
+          border-radius: 0 8px 8px 0;
+        }
+        .hero-search-input button:hover { background: #c94d00; }
+
+        /* ── Buttons ── */
+        .btn-primary {
+          background: ${ORANGE}; color: ${WHITE};
+          padding: 14px 32px; border-radius: 8px;
+          border: none; cursor: pointer;
+          font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.02em;
+          display: inline-flex; align-items: center; gap: 8px;
+          transition: all .3s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-primary:hover { background: #c94d00; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(232,93,4,.35); }
+
+        .btn-navy {
+          background: ${NAVY}; color: ${WHITE};
+          padding: 14px 32px; border-radius: 8px;
+          border: none; cursor: pointer;
+          font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.02em;
+          display: inline-flex; align-items: center; gap: 8px;
+          transition: all .3s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-navy:hover { background: #0f1d36; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(28,43,74,.35); }
+
+        .btn-outline {
+          background: transparent; color: ${NAVY};
+          padding: 13px 28px; border-radius: 8px;
+          border: 2px solid ${NAVY}; cursor: pointer;
+          font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 14px;
+          display: inline-flex; align-items: center; gap: 8px;
+          transition: all .3s ease;
+        }
+        .btn-outline:hover { background: ${NAVY}; color: ${WHITE}; }
+
+        /* ═══ BENTO GRID CARDS ═══ */
+        .bento-hero {
+          border-radius: 24px; cursor: pointer;
+          padding: 36px 36px 32px; position: relative; overflow: hidden;
+          background: linear-gradient(135deg, #0C1A30 0%, #1B2D4A 50%, #0C1A30 100%);
+          border: 1px solid rgba(255,255,255,0.06);
+          transition: all .5s cubic-bezier(.16,1,.3,1);
+          box-shadow: 0 8px 32px rgba(12,26,48,0.25);
+        }
+        .bento-hero:hover {
+          transform: translateY(-4px); box-shadow: 0 20px 50px rgba(12,26,48,0.35);
+          border-color: rgba(255,90,31,0.3);
+        }
+        .bento-hero::after {
+          content: ''; position: absolute; top: -50%; left: -50%;
+          width: 200%; height: 200%;
+          background: conic-gradient(from 0deg, transparent, rgba(255,90,31,0.06), transparent, transparent);
+          animation: bento-spin 8s linear infinite;
+        }
+        @keyframes bento-spin { 100% { transform: rotate(360deg); } }
+        .bento-cell {
+          border-radius: 20px; cursor: pointer;
+          padding: 24px 22px; position: relative; overflow: hidden;
+          background: ${WHITE};
+          border: 1px solid ${BORDER};
+          transition: all .4s cubic-bezier(.16,1,.3,1);
+          box-shadow: 0 2px 8px rgba(28,43,74,0.05);
+          display: flex; flex-direction: column; justify-content: space-between;
+          min-height: 140px;
+        }
+        .bento-cell::before {
+          content: ''; position: absolute; bottom:0; left:0; right:0; height: 3px;
+          background: linear-gradient(90deg, ${ORANGE}, #FF8C00);
+          transform: scaleX(0); transform-origin: left;
+          transition: transform .4s ease;
+        }
+        .bento-cell:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(28,43,74,0.1); border-color: rgba(255,140,0,0.25); }
+        .bento-cell:hover::before { transform: scaleX(1); }
+        /* heat bar */
+        .heat-bar { height:3px; border-radius:2px; background:${BORDER}; overflow:hidden; }
+        .heat-fill { height:100%; border-radius:2px; background: linear-gradient(90deg, ${ORANGE}, #FF8C00); transition: width .8s ease; }
+        /* live dot */
+        .live-dot {
+          display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 0 0 rgba(34,197,94,0.5);
+          animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+          0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+          70%  { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+          100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+        /* ═══ TERMINAL ═══ */
+        .term-window {
+          background: #0D0D0D;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
+          font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        }
+        .term-bar {
+          display: flex; align-items: center; gap: 7px;
+          padding: 12px 16px;
+          background: #1A1A1A;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .term-dot { width:11px; height:11px; border-radius:50%; }
+        .term-body {
+          padding: 20px 18px;
+          font-size: 13px;
+          line-height: 2;
+          color: rgba(255,255,255,0.5);
+          min-height: 250px;
+        }
+        .term-line {
+          opacity: 0;
+          animation: term-in .3s ease forwards;
+        }
+        .term-line:nth-child(1) { animation-delay: 0.4s; }
+        .term-line:nth-child(2) { animation-delay: 1.2s; }
+        .term-line:nth-child(3) { animation-delay: 2.0s; }
+        .term-line:nth-child(4) { animation-delay: 2.8s; }
+        .term-line:nth-child(5) { animation-delay: 3.6s; }
+        .term-line:nth-child(6) { animation-delay: 4.4s; }
+        .term-line:nth-child(7) { animation-delay: 5.0s; }
+        .term-line:nth-child(8) { animation-delay: 5.6s; }
+        @keyframes term-in {
+          0%   { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .term-cursor {
+          display: inline-block; width: 8px; height: 16px;
+          background: #22c55e;
+          animation: blink-cursor 1s step-end infinite;
+          vertical-align: middle; margin-left: 4px;
+        }
+        @keyframes blink-cursor { 50% { opacity: 0; } }
+
+        /* ── Stats card ── */
+        .stat-card {
+          background: ${WHITE}; border-radius: 16px;
+          padding: 36px 28px; text-align: center;
+          border: 1px solid ${BORDER};
+          transition: all .35s cubic-bezier(.16,1,.3,1);
+        }
+        .stat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(28,43,74,0.08); }
+
+        /* ── Product card ── */
+        .prod-card {
+          background: ${WHITE}; border-radius: 16px;
+          overflow: hidden; cursor: pointer;
+          border: 1px solid ${BORDER};
+          transition: all .35s cubic-bezier(.16,1,.3,1);
+        }
+        .prod-card:hover { transform: translateY(-8px); box-shadow: 0 24px 60px rgba(28,43,74,0.1); border-color: rgba(28,43,74,0.2); }
+        .prod-card .prod-img { transition: transform .5s ease; display:block; }
+        .prod-card:hover .prod-img { transform: scale(1.06); }
+
+        /* ── Review card ── */
+        .rev-card {
+          background: ${WHITE}; border-radius: 16px; padding: 28px;
+          border: 1px solid ${BORDER};
+          transition: all .35s ease;
+        }
+        .rev-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(28,43,74,0.08); }
+
+        /* ── How-step card ── */
+        .step-card {
+          background: ${WHITE}; border-radius: 16px; padding: 28px;
+          border: 1px solid ${BORDER};
+          transition: all .35s cubic-bezier(.16,1,.3,1);
+          position: relative; overflow: hidden;
+        }
+        .step-card::before {
+          content: ''; position: absolute; top:0; left:0; right:0; height:3px;
+          background: linear-gradient(90deg, ${NAVY}, ${ORANGE});
+          transform: scaleX(0); transform-origin: left;
+          transition: transform .4s ease;
+        }
+        .step-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(28,43,74,0.1); }
+        .step-card:hover::before { transform: scaleX(1); }
+
+        /* ── Cat pill ── */
+        .cat-chip {
+          background: ${WHITE}; border: 1px solid ${BORDER};
+          border-radius: 100px; padding: 10px 20px;
+          cursor: pointer; font-size: 13px; font-weight: 600; color: ${TEXT};
+          transition: all .3s ease;
+          white-space: nowrap;
+        }
+        .cat-chip:hover { background: ${NAVY}; color: ${WHITE}; border-color: ${NAVY}; transform: translateY(-2px); }
+
+        @media(max-width:900px) {
+          .hero-grid { grid-template-columns: 1fr !important; }
+          .svc-grid  { grid-template-columns: 1fr !important; }
+          .stat-grid { grid-template-columns: 1fr 1fr !important; }
+          .step-grid { grid-template-columns: 1fr 1fr !important; }
+          .prod-grid { grid-template-columns: 1fr 1fr !important; }
+          .rev-grid  { grid-template-columns: 1fr !important; }
+        }
+        @media(max-width:600px) {
+          .stat-grid { grid-template-columns: 1fr 1fr !important; }
+          .step-grid { grid-template-columns: 1fr !important; }
+          .prod-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
+      {/* ════════════════════════════════════════════════════════
+          §1  HERO — LogiCraft exact structure:
+              • White page BG visible AROUND the hero card
+              • Hero is a ROUNDED RECTANGLE (28px border-radius)
+              • Inside: full-bleed image + left dark-to-transparent gradient
+              • TECHVERSE brand + headline over the dark side
+              • Floating WHITE search card at bottom-left (partially overlaps)
+      ════════════════════════════════════════════════════════ */}
+      <div style={{ background: PAGE, paddingTop: 88, paddingBottom: 0 }}>
+        {/* Hero card: min-height:72vh from CSS class overrides everything — we MUST override it inline */}
+        <div
+          className="hero-card"
+          style={{
+            overflow: 'hidden',
+            borderRadius: isMobile ? 20 : 28,
+            position: 'relative',
+            backgroundColor: '#050A14',
+            transform: 'translateZ(0)',
+            margin: isMobile ? '0 12px' : undefined,
+            /* Inline minHeight beats the .hero-card { min-height: 72vh } CSS rule */
+            minHeight: isMobile ? 0 : undefined,
+          }}
+        >
+          <BackgroundPaths>
+            {/* Dark semi-transparent overlay to support content */}
+            <div className="hero-overlay" style={{ position: 'absolute', inset: 0, zIndex: 1, background: isMobile ? 'linear-gradient(280deg, rgba(5,10,20,0.7) 0%, rgba(5,10,20,0.3) 40%, rgba(5,10,20,0.0) 100%)' : 'linear-gradient(280deg, rgba(5,10,20,0.92) 0%, rgba(5,10,20,0.60) 40%, rgba(5,10,20,0.3) 100%)' }} />
+
+            {/* HERO SPLIT LAYOUT — text left, 3D floats right on ALL sizes */}
+            <div
+              style={{
+                position: 'relative', zIndex: 3, width: '100%',
+                display: 'flex', alignItems: 'center',
+                overflow: 'hidden',
+                minHeight: isMobile ? 'auto' : '650px',
+              }}
+            >
+
+              {/* ── LEFT: CREATIVE TEXT ── */}
+              <div
+                style={{
+                  position: 'relative',
+                  zIndex: 20,
+                  pointerEvents: 'auto',
+                  flex: 'none',
+                  width: isMobile ? '65%' : '50%',
+                  minWidth: isMobile ? 'auto' : '400px',
+                  padding: isMobile ? '30px 0 30px 16px' : '40px 40px 40px 6vw',
+                  textAlign: 'left',
+                }}
               >
-                <Suspense fallback={null}>
-                  <OrbitControls
-                    enableZoom={false}
-                    enablePan={false}
-                    minPolarAngle={Math.PI / 2.5}
-                    maxPolarAngle={Math.PI / 1.8}
-                  />
-                  <a3.group position={slideProps.position}>
-                    <a3.group rotation={rotation}>
-                      <CurrentModelComponent isMobile={isMobile} />
-                    </a3.group>
-                  </a3.group>
-                  <Environment preset="city" />
-                  <ambientLight intensity={0.7} />
-                  <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
-                </Suspense>
-              </Canvas>
+                <div style={{ animation: 'bounce-in 1.2s .4s ease both' }}>
+                  {/* Label */}
+                  <span style={{
+                    fontSize: isMobile ? 9 : 13, fontWeight: 700, letterSpacing: '0.2em',
+                    color: ORANGE, textTransform: 'uppercase', marginBottom: isMobile ? 8 : 16,
+                    display: 'inline-block', borderBottom: `2px solid ${ORANGE}`, paddingBottom: 3,
+                  }}>
+                    The Next Dimension
+                  </span>
 
-              {/* Model Indicator Dots */}
-              <div style={{
-                position: 'absolute',
-                bottom: '10px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '10px',
-                zIndex: 10
-              }}>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '5px' }}>
-                  {models.map((_, index) => (
-                    <div
-                      key={index}
+                  {/* Main headline */}
+                  <h1 style={{
+                    fontFamily: 'Poppins, sans-serif', fontWeight: 900,
+                    fontSize: isMobile ? 'clamp(22px, 6.5vw, 36px)' : 'clamp(46px, 6vw, 84px)',
+                    color: WHITE, lineHeight: 1.0, letterSpacing: '-0.02em',
+                    marginBottom: isMobile ? 10 : 24,
+                    marginTop: isMobile ? 6 : 12,
+                  }}>
+                    Unleash<br />
+                    <span style={{ color: 'transparent', WebkitTextStroke: isMobile ? '1.5px rgba(255,255,255,0.85)' : '2px rgba(255,255,255,0.85)', WebkitTextFillColor: 'transparent', position: 'relative' }}>
+                      Ultimate
+                      <span style={{ position: 'absolute', left: 0, color: ORANGE, opacity: 0.1, WebkitTextStroke: 'none', filter: 'blur(12px)' }}>Ultimate</span>
+                    </span>
+                    <br />Performance.
+                  </h1>
+
+                  {/* Description paragraph — Hidden on mobile to match the provided screenshot compact layout */}
+                  <p style={{
+                    fontSize: 'clamp(14px, 1.5vw, 17px)',
+                    color: 'rgba(255,255,255,0.7)', lineHeight: 1.7,
+                    maxWidth: 480,
+                    fontWeight: 300,
+                    marginBottom: 44,
+                    animation: 'bounce-in 1.2s .6s ease both',
+                    display: isMobile ? 'none' : 'block',
+                  }}>
+                    Interact with the future. Premium hardware seamlessly rendered in breathtaking 3D. Precision engineering meets cutting-edge retail experience. Drag to explore.
+                  </p>
+                  <div style={{
+                    position: 'relative', zIndex: 30, pointerEvents: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: isMobile ? 8 : 16,
+                    animation: 'bounce-in 1.2s .8s ease both',
+                    /* Shrink the button wrap width on mobile to make them less violently long */
+                    width: isMobile ? '80%' : 'auto',
+                    alignItems: 'stretch',
+                  }}>
+                    <button
+                      className="btn-primary hover-btn"
                       style={{
-                        width: window.innerWidth <= 900 ? '8px' : '10px',
-                        height: window.innerWidth <= 900 ? '8px' : '10px',
-                        borderRadius: '50%',
-                        backgroundColor: currentModel === index ? 'white' : 'rgba(255, 255, 255, 0.3)',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
+                        padding: isMobile ? '10px 14px' : '16px 36px',
+                        fontSize: isMobile ? 11 : 15,
+                        width: '100%',
+                        justifyContent: 'center',
                       }}
-                      onClick={() => {
-                        if (index > currentModel) runAnimation('next');
-                        if (index < currentModel) runAnimation('prev');
+                      onClick={() => navigate('/store')}
+                    >
+                      Explore Masterpieces <ArrowForwardIcon sx={{ ml: 0.5, fontSize: isMobile ? 13 : 18 }} />
+                    </button>
+                    <button
+                      className="btn-outline hover-btn"
+                      style={{
+                        borderColor: 'rgba(255,255,255,0.3)', color: WHITE,
+                        padding: isMobile ? '10px 14px' : '16px 36px',
+                        fontSize: isMobile ? 11 : 15,
+                        width: '100%',
+                        justifyContent: 'center',
                       }}
-                    />
-                  ))}
+                      onClick={() => navigate('/services')}
+                    >
+                      View Services <ArrowForwardIcon sx={{ ml: 0.5, fontSize: isMobile ? 13 : 18 }} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </CanvasWrapper>
-          </HeroContainer>
-        </HeroSection>
-        {/* ==================== END HERO SECTION ==================== */}
 
-        {/* ==================== OUR SERVICES SECTION ==================== */}
-        <ServicesSection>
-          <ServicesContainer>
-            <ServicesSectionTitle>Our Services</ServicesSectionTitle>
-            {/* <ServicesSectionSubtitle>
-      Professional repair services for all your technology needs
-    </ServicesSectionSubtitle> */}
+              {/* ── RIGHT: 3D MODEL ──
+                  Mobile: absolute so it doesn't affect document flow height.
+                  Desktop: relative flex child so it takes up 50% of the flex row.
+              */}
+              <div
+                style={{
+                  position: isMobile ? 'absolute' : 'relative',
+                  /* Push to the top of the card rather than centering it vertically */
+                  top: isMobile ? '0%' : undefined,
+                  right: isMobile ? '-5%' : undefined,
+                  /* Shift the entire canvas structurally to the right on mobile */
+                  transform: isMobile ? 'translateX(12%)' : undefined,
+                  flex: isMobile ? 'none' : '1 1 50%',
+                  /* Bigger on mobile — more model visible */
+                  width: isMobile ? '100%' : undefined,
+                  minWidth: isMobile ? 'auto' : '400px',
+                  height: isMobile ? '400px' : '650px',
+                  zIndex: 0,
+                  pointerEvents: isMobile ? 'none' : 'auto',
+                  background: 'transparent',
+                }}
+              >
+                <div style={{ position: 'absolute', inset: 0, animation: 'slide-up 1.2s .2s both', background: 'transparent' }}>
+                  <Showcase3D isMobile={isMobile} />
+                </div>
+              </div>
 
-            <ServicesGrid>
-              {/* Dynamic Service Cards from Real Data */}
-              {topCategories.map((category) => (
-                <ServiceCard
-                  key={category.id}
-                  onClick={() => handleServiceClick(category.id)}
-                  className="service-card"
+            </div>
+          </BackgroundPaths>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════
+          §2  TRENDING SERVICES — Bento Grid + CLI Terminal
+      ════════════════════════════════════════════════════════ */}
+      <section ref={s1.ref} style={{ background: PAGE, padding: isMobile ? '40px 16px 50px' : '90px 6vw 70px', position: 'relative' }}>
+
+        {/* Editorial Header */}
+        <div style={rev(s1.v, 0)}>
+          <div style={{ marginBottom: isMobile ? 24 : 48 }}>
+            {/* Live badge — hidden on mobile to keep clean like screenshot */}
+            {!isMobile && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 100, padding: '6px 14px 6px 10px', marginBottom: 20, boxShadow: '0 2px 8px rgba(28,43,74,0.06)' }}>
+                <span className="live-dot" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT, letterSpacing: '.04em' }}>Live — Updated This Week</span>
+              </div>
+            )}
+            <h2 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 900, fontSize: isMobile ? '28px' : 'clamp(32px,4.5vw,56px)', color: TEXT, lineHeight: 1, letterSpacing: '-0.035em', margin: 0 }}>
+              Our services
+            </h2>
+            <p style={{ fontSize: isMobile ? 13 : 15, color: MUTED, marginTop: 8, maxWidth: 420, lineHeight: 1.6 }}>
+              The top 5 most-booked categories this week, powered by real customer data.
+            </p>
+          </div>
+        </div>
+
+        {/* Layout: bento on top, terminal below on mobile; side-by-side on desktop */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: isMobile ? 20 : '4vw',
+          alignItems: 'start',
+        }}>
+
+          {/* LEFT — Bento Grid */}
+          <div style={rev(s1.v, 0.1)}>
+            {(() => {
+              // 1. Initialize with whatever trending data exists (even if empty)
+              let safeCategories = trendingCategories ? [...trendingCategories] : [];
+
+              // 2. Preemptive DB Padding Check: If trending is 0 or less than 5, IMMEDIATELY pad it 
+              // from the master database before letting the UI decide if it's "empty".
+              if (safeCategories.length < 5 && serviceCategories && serviceCategories.length > safeCategories.length) {
+                const needed = 5 - safeCategories.length;
+                const dbFillers = serviceCategories
+                  .filter(sc => !safeCategories.find(tc => tc.id === sc.id))
+                  .slice(0, needed);
+                safeCategories = [...safeCategories, ...dbFillers];
+              }
+
+              // 3. Absolute Empty Check: ONLY show loading/empty if BOTH databases have absolutely nothing.
+              if (safeCategories.length === 0) {
+                return (
+                  <div style={{ color: MUTED, fontSize: 15, padding: '40px 0' }}>
+                    {svcLoading ? 'Loading live services...' : 'No services currently available.'}
+                  </div>
+                );
+              }
+
+              const top = safeCategories.slice(0, 5);
+              const hero = top[0];
+              const rest = top.slice(1);
+
+              return (
+                <>
+                  {/* #1 — Hero Bento Card */}
+                  <div className="bento-hero" onClick={() => navigate(`/services/request/${hero.id}`)}>
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ background: 'linear-gradient(135deg, #FF5A1F, #FF8C00)', borderRadius: 10, padding: '6px 14px', fontSize: 11, fontWeight: 800, color: '#fff', letterSpacing: '.04em' }}>🔥 #1 TRENDING</span>
+                          <span className="live-dot" />
+                        </div>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ArrowForwardIcon sx={{ fontSize: 17, color: '#fff' }} />
+                        </div>
+                      </div>
+                      <h3 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 900, fontSize: 'clamp(22px, 2.5vw, 32px)', color: '#fff', letterSpacing: '-.03em', marginBottom: 8, lineHeight: 1.1 }}>
+                        {hero.name}
+                      </h3>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 20 }}>
+                        {hero.issues && hero.issues.length > 0 ? `${hero.issues.length} issue types covered` : 'Most booked service this week'}
+                      </div>
+                      {/* Heat bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: '92%', borderRadius: 2, background: 'linear-gradient(90deg, #FF5A1F, #FF8C00)' }} />
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>92%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* #2–#5 — 2×2 Bento Grid: stays 2-col on mobile like the screenshot */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 10 : 14, marginTop: isMobile ? 10 : 14 }}>
+                    {rest.map((svc: any, i: number) => {
+                      const heat = [78, 65, 51, 40][i];
+                      return (
+                        <div key={svc.id || i} className="bento-cell" onClick={() => navigate(`/services/request/${svc.id}`)}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: ORANGE, letterSpacing: '.02em' }}>#{i + 2}</span>
+                              <span style={{ fontSize: 10, fontWeight: 600, color: MUTED }}>Trending</span>
+                            </div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, lineHeight: 1.3, marginBottom: 6 }}>{svc.name}</div>
+                            <div style={{ fontSize: 11, color: MUTED }}>
+                              {svc.issues && svc.issues.length > 0 ? `${svc.issues.length} types` : 'Expert service'}
+                            </div>
+                          </div>
+                          <div className="heat-bar" style={{ marginTop: 12 }}>
+                            <div className="heat-fill" style={{ width: `${heat}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* RIGHT — CLI Terminal */}
+          <div style={rev(s1.v, 0.25)}>
+            <div className="term-window">
+              {/* Title bar with macOS dots */}
+              <div className="term-bar">
+                <div className="term-dot" style={{ background: '#FF5F57' }} />
+                <div className="term-dot" style={{ background: '#FEBC2E' }} />
+                <div className="term-dot" style={{ background: '#28C840' }} />
+                <span style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.3)', letterSpacing: '.04em' }}>techverse — booking-cli</span>
+              </div>
+              {/* Terminal body with auto-reveal lines */}
+              <div className="term-body">
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>$</span> techverse <span style={{ color: '#60a5fa' }}>diagnose</span> --device <span style={{ color: '#fbbf24' }}>"Customer Device"</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>✓</span> <span style={{ color: 'rgba(255,255,255,0.7)' }}>Scanning hardware... Issue detected.</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>$</span> techverse <span style={{ color: '#60a5fa' }}>repair</span> --parts <span style={{ color: '#fbbf24' }}>genuine</span> --priority <span style={{ color: '#fbbf24' }}>express</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#f97316' }}>⧗</span> <span style={{ color: 'rgba(255,255,255,0.7)' }}>Assigning certified technician...</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>✓</span> <span style={{ color: 'rgba(255,255,255,0.7)' }}>Same-day slot confirmed — Tech #T-4821</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>$</span> techverse <span style={{ color: '#60a5fa' }}>warranty</span> --duration <span style={{ color: '#fbbf24' }}>90d</span> --coverage <span style={{ color: '#fbbf24' }}>full</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>✓</span> <span style={{ color: 'rgba(255,255,255,0.7)' }}>Warranty activated. Your device is protected.</span>
+                </div>
+                <div className="term-line">
+                  <span style={{ color: '#22c55e' }}>$</span> <span className="term-cursor" />
+                </div>
+              </div>
+              {/* Trust strip at bottom */}
+              <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.06)', background: '#111' }}>
+                {[
+                  { emoji: '⭐', val: '4.9', lbl: 'Rating' },
+                  { emoji: '⚡', val: '24hr', lbl: 'Response' },
+                  { emoji: '🛡️', val: '90 Day', lbl: 'Warranty' },
+                ].map((m, i) => (
+                  <div key={m.lbl} style={{ flex: 1, textAlign: 'center', padding: '14px 8px', borderLeft: i ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{m.emoji} {m.val}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>{m.lbl}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA below terminal */}
+            <button
+              style={{ width: '100%', marginTop: 16, padding: '17px 24px', borderRadius: 16, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${ORANGE}, #FF8C00)`, color: '#fff', fontWeight: 800, fontSize: 15, fontFamily: 'Poppins,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, transition: 'all .3s ease', boxShadow: '0 8px 24px rgba(255,90,31,0.35)', letterSpacing: '-.01em' }}
+              onClick={() => navigate('/services')}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 32px rgba(255,90,31,0.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(255,90,31,0.35)'; }}
+            >
+              Start Booking Now <ArrowForwardIcon sx={{ fontSize: 17 }} />
+            </button>
+            <p style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: MUTED }}>Prepayment · Fast service · Genuine parts only</p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          §3  HOLOGRAPHIC 3D CATEGORIES SHOWCASE
+      ════════════════════════════════════════════════════════ */}
+      <section style={{ background: PAGE, padding: '40px 0 20px', overflow: 'hidden', position: 'relative' }}>
+        <div className="max-lg:!flex-col max-lg:!items-start" style={{ padding: '0 6vw', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 2 }}>
+          <div>
+            <h2 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 800, fontSize: 'clamp(28px,4vw,48px)', color: TEXT, letterSpacing: '-0.02em', margin: 0 }}>
+              Product Categories.
+            </h2>
+            <p style={{ color: MUTED, fontSize: '16px', marginTop: '12px' }}>
+              Immersive hardware discovery. Driven by real-time market trends.
+            </p>
+          </div>
+          <div className="max-lg:!mt-4" style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => {
+                if (catScrollRef.current) catScrollRef.current.dataset.paused = "true";
+                catScrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
+                setTimeout(() => { if (catScrollRef.current) catScrollRef.current.dataset.paused = ""; }, 800);
+              }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+            >
+              ←
+            </button>
+            <button
+              onClick={() => {
+                if (catScrollRef.current) catScrollRef.current.dataset.paused = "true";
+                catScrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
+                setTimeout(() => { if (catScrollRef.current) catScrollRef.current.dataset.paused = ""; }, 800);
+              }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+            >
+              →
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={catScrollRef}
+          onMouseEnter={() => setIsAutoScrolling(false)}
+          onMouseLeave={() => setIsAutoScrolling(true)}
+          onTouchStart={() => {
+            if (catScrollRef.current) catScrollRef.current.dataset.paused = "true";
+          }}
+          onTouchEnd={() => {
+            // Wait 3 full seconds to absolutely guarantee that native browser
+            // swipe/momentum physics have completely settled before waking the auto-scroller
+            setTimeout(() => {
+              if (catScrollRef.current) catScrollRef.current.dataset.paused = "";
+            }, 3000);
+          }}
+          style={{
+            overflowX: 'auto',
+            padding: isMobile ? '5px 4vw 20px' : '10px 6vw 40px',
+            display: 'flex',
+            /* Close the slider gap considerably on mobile */
+            gap: isMobile ? '12px' : '40px',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+            perspective: '1500px',
+            position: 'relative',
+            zIndex: 2
+          }}
+        >
+          {(() => {
+            const list = productTrendingCategories && productTrendingCategories.length > 0 ? productTrendingCategories : cats;
+            return (
+              <>
+                {list.map((c: any, i: number) => (
+                  <HolographicCategoryCard
+                    key={i}
+                    cat={c}
+                    index={i}
+                    isTrending={i === 0}
+                    navigate={navigate}
+                    isMobile={isMobile}
+                  />
+                ))}
+
+                {/* EXPLORE MORE CARD COMPONENT APENDED TO END OF CAROUSEL */}
+                <div
+                  onClick={() => navigate('/store')}
+                  style={{
+                    flexShrink: 0,
+                    margin: isMobile ? '10px 0' : '20px 0',
+                    width: isMobile ? '160px' : '300px',
+                    height: isMobile ? '180px' : '340px',
+                    borderRadius: isMobile ? '20px' : '32px',
+                    background: 'rgba(255,255,255,1)',
+                    border: '2px dashed rgba(0,0,0,0.2)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                    transition: 'transform 0.3s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <ServiceIconWrapper className="service-icon-wrapper">
-                    {getCategoryIcon(category.name)}
-                  </ServiceIconWrapper>
-                  <ServiceTitle>{category.name}</ServiceTitle>
-                </ServiceCard>
-              ))}
+                  <div style={{ padding: isMobile ? '12px' : '24px', background: 'rgba(255,90,31,0.1)', borderRadius: '50%', color: '#FF5A1F', marginBottom: isMobile ? '8px' : '16px' }}>
+                    <ArrowForwardIcon sx={{ fontSize: isMobile ? 24 : 40 }} />
+                  </div>
+                  <div style={{ color: '#000', fontWeight: 800, fontSize: isMobile ? '12px' : '18px', textAlign: 'center' }}>
+                    Explore<br />All Categories
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      </section>
 
-              {/* More Services Button */}
-              <MoreServicesCard onClick={handleMoreServicesClick} className="service-card">
-                <ServiceIconWrapper className="service-icon-wrapper">
-                  <MoreServicesIconBox>
-                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="3" />
-                      <line x1="12" y1="1" x2="12" y2="3" />
-                      <line x1="12" y1="21" x2="12" y2="23" />
-                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                      <line x1="1" y1="12" x2="3" y2="12" />
-                      <line x1="21" y1="12" x2="23" y2="12" />
-                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                    </svg>
-                  </MoreServicesIconBox>
-                </ServiceIconWrapper>
-                <ServiceTitle>More Services</ServiceTitle>
-              </MoreServicesCard>
-            </ServicesGrid>
-          </ServicesContainer>
-        </ServicesSection>
-        {/* ==================== END OUR SERVICES SECTION ==================== */}
+      {/* ══ SCROLLYTELLING ══ */}
+      <MouseScrollytelling />
 
-        {/* ==================== CATEGORY SECTION ==================== */}
-        <CategorySection>
-          <SectionHeader>
-            <SectionTitle>Shop by Category</SectionTitle>
-          </SectionHeader>
-          <CategoryGrid>
-            {productCategories.map((category) => (
-              <AnimatedCategoryCard key={category.name} category={category} />
-            ))}
-          </CategoryGrid>
-        </CategorySection>
-        {/* ==================== END CATEGORY SECTION ==================== */}
+      {/* ══ 3D LAPTOP SCROLLYTELLING ══ */}
+      <LaptopScrollSection />
 
-        {/* ==================== ABOUT SECTION ==================== */}
-        <AboutSection>
-          {/* About Content */}
-          <AboutContent>
-            <Typography variant="h3">About TechVerse</Typography>
-            <Typography>
-              We are passionate technology enthusiasts dedicated to bringing you the latest and greatest in tech innovation.
-              Our mission is to bridge the gap between cutting-edge technology and everyday users, making advanced tech accessible to everyone.
-            </Typography>
-            <Typography>
-              With years of experience in the tech industry, we curate only the finest products that meet our strict quality standards.
-            </Typography>
-          </AboutContent>
-
-          {/* Services - NOW WITH MUI ICONS */}
-          <ServicesWrapper>
-            <ServiceBox>
-              <ServiceIconBox>
-                <ConstructionIcon />
-              </ServiceIconBox>
-              <ServiceText>Expert Installation</ServiceText>
-            </ServiceBox>
-            <ServiceBox>
-              <ServiceIconBox>
-                <FlashOnIcon />
-              </ServiceIconBox>
-              <ServiceText>Fast Delivery</ServiceText>
-            </ServiceBox>
-            <ServiceBox>
-              <ServiceIconBox>
-                <ShieldIcon />
-              </ServiceIconBox>
-              <ServiceText>Premium Support</ServiceText>
-            </ServiceBox>
-          </ServicesWrapper>
-
-          {/* Statistics */}
-          <StatsSection>
-            <Typography variant="h3">Our Impact</Typography>
-            <Typography className="subtext">Numbers that speak for themselves</Typography>
-            <StatsGrid>
-              <StatItem>
-                <StatNumber>10K+</StatNumber>
-                <StatLabel>Happy Customers</StatLabel>
-              </StatItem>
-              <StatItem>
-                <StatNumber>500+</StatNumber>
-                <StatLabel>Products Sold</StatLabel>
-              </StatItem>
-              <StatItem>
-                <StatNumber>98%</StatNumber>
-                <StatLabel>Satisfaction Rate</StatLabel>
-              </StatItem>
-              <StatItem>
-                <StatNumber>24/7</StatNumber>
-                <StatLabel>Support Available</StatLabel>
-              </StatItem>
-            </StatsGrid>
-          </StatsSection>
-        </AboutSection>
-        {/* ==================== END ABOUT SECTION ==================== */}
-
-        {/* ==================== FEATURED SECTION ==================== */}
-        <FeaturedWrapper>
-          <FeaturedContainer>
-            {/* Left Side - Contact Form */}
-            <FeaturedLeft>
-              <Typography variant="h2">Featured Technology</Typography>
-              <Typography>
-                Discover our handpicked selection of premium technology products. Each item is carefully chosen for its innovation,
-                quality, and ability to enhance your digital lifestyle. From cutting-edge computing solutions to immersive audio experiences.
-              </Typography>
-              <ContactBox>
-                <Typography variant="h3">Get In Touch</Typography>
-                <ContactInput type="text" placeholder="Your Name" />
-                <ContactInput type="email" placeholder="Your Email" />
-                <ContactInput type="text" placeholder="Subject" />
-                <SendButton>Send Message</SendButton>
-              </ContactBox>
-            </FeaturedLeft>
-
-            {/* Right Side - Featured Cards - NOW WITH MUI ICONS */}
-            <FeaturedRight>
-              <FeaturedCard className="featured-card">
-                <FeaturedImg>
-                  <HeadphonesIcon />
-                </FeaturedImg>
-                <FeaturedDetails>
-                  <FeaturedTitle>Premium Audio</FeaturedTitle>
-                  <FeaturedDesc>
-                    Experience crystal-clear sound quality with our premium headphone collection. Featuring noise cancellation,
-                    wireless connectivity, and studio-grade audio performance for professionals and enthusiasts alike.
-                  </FeaturedDesc>
-                  <AuthorInfo>
-                    <AuthorAvatar />
-                    <AuthorDetails>
-                      <AuthorName>Sarah Chen</AuthorName>
-                      <AuthorRole>Audio Specialist</AuthorRole>
-                    </AuthorDetails>
-                  </AuthorInfo>
-                </FeaturedDetails>
-              </FeaturedCard>
-
-              <FeaturedCard className="featured-card">
-                <FeaturedImg>
-                  <ComputerIcon />
-                </FeaturedImg>
-                <FeaturedDetails>
-                  <FeaturedTitle>High-Performance Computing</FeaturedTitle>
-                  <FeaturedDesc>
-                    Unleash your productivity with our latest laptop and desktop solutions. Featuring cutting-edge processors,
-                    advanced graphics, and lightning-fast storage for gaming, creative work, and professional applications.
-                  </FeaturedDesc>
-                  <AuthorInfo>
-                    <AuthorAvatar />
-                    <AuthorDetails>
-                      <AuthorName>Marcus Rodriguez</AuthorName>
-                      <AuthorRole>Tech Consultant</AuthorRole>
-                    </AuthorDetails>
-                  </AuthorInfo>
-                </FeaturedDetails>
-              </FeaturedCard>
-
-              <FeaturedCard className="featured-card">
-                <FeaturedImg>
-                  <PhoneAndroidIcon />
-                </FeaturedImg>
-                <FeaturedDetails>
-                  <FeaturedTitle>Smart Accessories</FeaturedTitle>
-                  <FeaturedDesc>
-                    Enhance your tech setup with our collection of smart accessories. From wireless charging solutions to
-                    ergonomic peripherals, discover products that seamlessly integrate into your digital ecosystem.
-                  </FeaturedDesc>
-                  <AuthorInfo>
-                    <AuthorAvatar />
-                    <AuthorDetails>
-                      <AuthorName>Emily Zhang</AuthorName>
-                      <AuthorRole>Product Manager</AuthorRole>
-                    </AuthorDetails>
-                  </AuthorInfo>
-                </FeaturedDetails>
-              </FeaturedCard>
-            </FeaturedRight>
-          </FeaturedContainer>
-        </FeaturedWrapper>
-        {/* ==================== END FEATURED SECTION ==================== */}
-
-        {/* ==================== FOOTER ==================== */}
-        <Footer />
-        {/* ==================== END FOOTER ==================== */}
-
-      </PageWrapper>
-    </ThemeProvider>
+    </>
   );
 };
-
-// ==================== END MAIN COMPONENT ====================
 
 export default LandingPage;

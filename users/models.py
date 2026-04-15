@@ -42,6 +42,7 @@ class CustomUser(AbstractUser):
         CUSTOMER = "CUSTOMER", "Customer"
         TECHNICIAN = "TECHNICIAN", "Technician"
         AMC = "AMC", "AMC"
+        AFFILIATE = "AFFILIATE", "Affiliate"
 
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)

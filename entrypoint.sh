@@ -4,13 +4,19 @@
 set -e
 
 # Run migrations
-echo "Runnning migrations..."
+echo "Running migrations..."
 python manage.py migrate
+
+# Dev-only setup (configures Site domain for localhost, etc.)
+if [ "$DEBUG" = "True" ]; then
+    echo "Running dev_setup..."
+    python manage.py dev_setup
+fi
 
 # Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Start Gunicorn
-echo "Starting Gunicorn..."
+# Start the server
+echo "Starting server..."
 exec "$@"

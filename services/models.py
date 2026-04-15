@@ -6,6 +6,12 @@ from store.models import Address
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    custom_request_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=500.00,
+        help_text="Default price to charge for custom service requests in this category."
+    )
 
     class Meta:
         verbose_name_plural = 'Service Categories'
@@ -24,6 +30,7 @@ class ServiceIssue(models.Model):
 class ServiceRequest(models.Model):
     STATUS_CHOICES = (
         ('SUBMITTED', 'Submitted'),
+        ('CONFIRMED', 'Confirmed'),
         ('ASSIGNED', 'Technician Assigned'),
         ('IN_PROGRESS', 'In Progress'),
         ('COMPLETED', 'Completed'),
@@ -168,5 +175,36 @@ class JobSheetMaterial(models.Model):
         ordering = ['date_used', 'id']
         verbose_name = 'Job Sheet Material'
         verbose_name_plural = 'Job Sheet Materials'
+
+
+class ServiceSettings(models.Model):
+    """
+    Singleton model for global service settings.
+    """
+    custom_request_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=500.00, 
+        help_text="Default price to charge for custom service requests where no specific issue is selected."
+    )
+
+    class Meta:
+        verbose_name = "Service Setting"
+        verbose_name_plural = "Service Settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Global Service Settings"
 
 

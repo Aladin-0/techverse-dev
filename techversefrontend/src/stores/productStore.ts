@@ -1,8 +1,7 @@
 // src/stores/productStore.ts
 
 import { create } from 'zustand';
-import axios from 'axios';
-import apiClient, { API_BASE_URL } from '../api';
+import apiClient from '../api';
 
 // Define the shape of a single product
 interface Product {
@@ -17,6 +16,9 @@ interface Product {
     name: string;
     slug: string;
   };
+  specifications_dict?: Record<string, string>;
+  is_amazon_affiliate?: boolean;
+  amazon_affiliate_link?: string;
 }
 
 // Define the shape of an address
@@ -33,38 +35,50 @@ interface Address {
 interface ProductState {
   products: Product[];
   addresses: Address[];
+  trendingCategories: any[];
   fetchProducts: () => Promise<void>;
   fetchAddresses: () => Promise<void>;
+  fetchTrendingCategories: () => Promise<void>;
 }
 
 // Create the store
 export const useProductStore = create<ProductState>((set) => ({
   products: [],
   addresses: [],
+  trendingCategories: [],
   fetchProducts: async () => {
     try {
-
-      // Use direct axios for public endpoints
-      const response = await axios.get(`${API_BASE_URL}/api/products/`, {
-        timeout: 5000
+      // Use apiClient for consistency and automatic base URL handling
+      const response = await apiClient.get('/api/products/', {
+        timeout: 10000 // Increased timeout for slower environments
       });
 
-      set({ products: response.data });
+      // Handle both direct arrays and paginated results
+      const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+      set({ products: data });
     } catch (error) {
       console.error("Failed to fetch products:", error);
-      // Set empty array on error so UI shows "no products" instead of loading forever
       set({ products: [] });
     }
   },
   fetchAddresses: async () => {
     try {
-
       const response = await apiClient.get('/api/addresses/');
-
-      set({ addresses: response.data });
+      const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+      set({ addresses: data });
     } catch (error) {
       console.error("Failed to fetch addresses:", error);
       set({ addresses: [] });
+    }
+  },
+  fetchTrendingCategories: async () => {
+    try {
+      const response = await apiClient.get('/api/categories/trending/');
+      const data = response.data?.categories || [];
+      set({ trendingCategories: data });
+    } catch (error) {
+      console.error("Failed to fetch trending categories:", error);
+      set({ trendingCategories: [] });
     }
   },
 }));

@@ -48,6 +48,9 @@ class ServiceRequestHistorySerializer(serializers.ModelSerializer):
     request_date = serializers.DateTimeField(read_only=True)
     can_rate = serializers.SerializerMethodField()
     service_location = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
+    transaction_id = serializers.SerializerMethodField()
+    payment_date = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceRequest
@@ -62,15 +65,29 @@ class ServiceRequestHistorySerializer(serializers.ModelSerializer):
             'status',
             'technician_name',
             'can_rate',
+            'payment_status',
+            'transaction_id',
+            'payment_date',
         ]
 
     def get_technician_name(self, obj):
         return obj.technician.name if obj.technician else None
 
     def get_can_rate(self, obj):
-        # Can rate only when completed, has technician, and not already rated
         has_rating = hasattr(obj, 'rating') and obj.rating is not None
         return bool(obj.technician and obj.status == 'COMPLETED' and not has_rating)
+
+    def get_payment_status(self, obj):
+        latest = obj.payments.order_by('-created_at').first()
+        return latest.status if latest else None
+        
+    def get_transaction_id(self, obj):
+        latest = obj.payments.filter(status='SUCCESS').order_by('-created_at').first()
+        return latest.provider_order_id if latest else None
+        
+    def get_payment_date(self, obj):
+        latest = obj.payments.filter(status='SUCCESS').order_by('-created_at').first()
+        return latest.created_at if latest else None
 
     def get_service_location(self, obj):
         loc = obj.service_location

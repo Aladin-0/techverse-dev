@@ -22,6 +22,8 @@ urlpatterns = [
     path('update-order-status/<int:order_id>/', views.update_order_status, name='update_order_status'),
 
     # API endpoints
+    path('api/categories/trending/', views.TrendingProductCategoryAPIView.as_view(), name='api_trending_categories'),
+    path('api/categories/', views.ProductCategoryListAPIView.as_view(), name='api_product_category_list'),
     path('api/products/', views.ProductListAPIView.as_view(), name='api_product_list'),
     path('api/products/<slug:slug>/', views.ProductDetailAPIView.as_view(), name='api_product_detail'),
     path('api/addresses/', views.AddressListAPIView.as_view(), name='api_address_list'),
@@ -36,6 +38,9 @@ urlpatterns = [
     path('api/orders/create-bulk/', views.create_bulk_order, name='api_create_bulk_order'),
     path('api/orders/<int:order_id>/cancel/', views.cancel_order, name='api_cancel_order'),
 
+    # Chatbot API endpoint
+    path('api/chat/', views.chatbot_query, name='api_chatbot_query'),
+
     # Technician API endpoints
     path('api/technician/assigned-orders/', TechnicianAssignedOrdersView.as_view(), name='api_technician_orders'),
     path('api/technician/assigned-services/', TechnicianAssignedServicesView.as_view(), name='api_technician_services'),
@@ -46,4 +51,7 @@ urlpatterns = [
     # Admin endpoints
     path('admin/delete-product-image/<int:image_id>/', views.delete_product_image, name='delete_product_image'),
     path('admin-panel/products/<int:product_id>/delete/', views.delete_product, name='delete_product'),
+
+    # Store Banners
+    path('api/banners/', views.StoreBannerListAPIView.as_view(), name='api_banner_list'),
 ]

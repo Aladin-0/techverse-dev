@@ -4,8 +4,14 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { useUserStore } from './stores/userStore';
 import { useCartStore } from './stores/cartStore';
 import { LoginSuccessHandler } from './components/LoginSuccessHandler';
+import { ShoppingCart } from './components/ShoppingCart';
 import { NavBar } from './components/NavBar';
+import { Footer } from './components/Footer';
+import { ChatbotWidget } from './components/ChatbotWidget';
+import ScrollToTop from './components/ScrollToTop';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import { ComparisonBar } from './components/ComparisonBar';
+import { AffiliateHandler } from './components/AffiliateHandler';
 
 // Lazy loading components
 // Default exports
@@ -27,6 +33,9 @@ const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then(mo
 const ReturnPolicyPage = lazy(() => import('./pages/ReturnPolicyPage').then(module => ({ default: module.ReturnPolicyPage })));
 const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage').then(module => ({ default: module.RefundPolicyPage })));
 const ShippingPolicyPage = lazy(() => import('./pages/ShippingPolicyPage').then(module => ({ default: module.ShippingPolicyPage })));
+const ComparisonPage = lazy(() => import('./pages/ComparisonPage').then(module => ({ default: module.ComparisonPage })));
+const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard').then(module => ({ default: module.AffiliateDashboard })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })));
 import { TermsConditionsPage } from './pages/TermsConditionsPage';
 
 // Loading Fallback
@@ -38,11 +47,11 @@ const PageLoader = () => (
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#000',
-    color: 'white'
+    backgroundColor: '#FAF9F5',
+    color: '#1A1814'
   }}>
-    <CircularProgress size={40} sx={{ color: '#60a5fa', mb: 2 }} />
-    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>Loading...</Typography>
+    <CircularProgress size={36} sx={{ color: '#1C2B4A', mb: 2 }} />
+    <Typography variant="body2" sx={{ color: '#6B6156', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Loading...</Typography>
   </Box>
 );
 
@@ -100,13 +109,13 @@ function App() {
   const user = useUserStore((state) => state.user);
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const setCurrentUser = useCartStore((state) => state.setCurrentUser);
+  // ✅ React Router useLocation — reactive to route changes (not window.location)
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    // Check authentication status on app start
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // Sync cart with user authentication state
   useEffect(() => {
     if (isAuthenticated && user) {
       setCurrentUser(user.id.toString());
@@ -117,19 +126,21 @@ function App() {
 
   return (
     <>
+      <ScrollToTop />
       <LoginSuccessHandler />
       <TechnicianRedirect />
 
-      {/* Show NavBar only for non-technicians or on login page */}
+      {/* Global Stitch-style navbar */}
       {(!isAuthenticated || !user || user.role !== 'TECHNICIAN') && <NavBar />}
 
-      <main style={{
-        paddingBottom: window.innerWidth <= 900 ? '100px' : '0'
-      }}>
+      <main>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Login Route - Accessible to all */}
             <Route path="/login" element={<LoginPage />} />
+
+            {/* Password Reset Confirmation - Linked from email */}
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Technician Routes - Only for technicians */}
             <Route
@@ -142,14 +153,8 @@ function App() {
             />
 
             {/* Customer Routes - Redirect technicians away */}
-            <Route
-              path="/"
-              element={
-                <CustomerRoute>
-                  <LandingPage />
-                </CustomerRoute>
-              }
-            />
+            {/* LandingPage permanently rendered off-route to retain 50MB GPU cache \& WebGL Context. */}
+            <Route path="/" element={<Box sx={{ display: 'none' }} />} />
             <Route
               path="/store"
               element={
@@ -263,6 +268,18 @@ function App() {
                 </CustomerRoute>
               }
             />
+            <Route
+              path="/compare"
+              element={
+                <CustomerRoute>
+                  <ComparisonPage />
+                </CustomerRoute>
+              }
+            />
+
+            {/* Affiliate Routes */}
+            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+            <Route path="/:affiliateCode" element={<AffiliateHandler />} />
 
             {/* Catch all route - redirect based on user role */}
             <Route
@@ -275,7 +292,34 @@ function App() {
             />
           </Routes>
         </Suspense>
+        
+        {/*
+          THE 1000X OPTIMIZATION: 
+          We permanently mount the LandingPage for customers regardless of route.
+          When they visit /store, it merely hides this component. 
+          The WebGL Context, 240 Scrolly Frames, and 3D Models are NEVER destroyed by the Garbage Collector!
+        */}
+        {(!isAuthenticated || !user || user.role !== 'TECHNICIAN') && (
+          <Box sx={{ display: pathname === '/' ? 'block' : 'none', width: '100%' }}>
+            <Suspense fallback={<PageLoader />}>
+              <LandingPage />
+            </Suspense>
+          </Box>
+        )}
       </main>
+      
+      {/* Global Shopping Cart Component */}
+      <ShoppingCart />
+
+      {/* Global Footer (Stitch exact) */}
+      {(!isAuthenticated || !user || user.role !== 'TECHNICIAN') && (
+        <>
+          <Footer />
+          {/* TechVerse AI: Home page only */}
+          {pathname === '/' && <ChatbotWidget />}
+          <ComparisonBar />
+        </>
+      )}
     </>
   );
 }

@@ -84,7 +84,7 @@ platformdirs==4.4.0
 prettytable==3.16.0
 prompt_toolkit==3.0.52
 proto-plus==1.26.1
-protobuf==6.33.0
+protobuf>=3.20.2,<6.0.0dev
 psycopg2-binary==2.9.9
 pure_eval==0.2.3
 pyasn1==0.6.1
@@ -137,3 +137,4 @@ websockets==15.0.1
 whitenoise==6.6.0
 yarg==0.1.9
 gunicorn
+google-generativeai==0.8.6

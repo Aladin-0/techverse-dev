@@ -3,17 +3,17 @@ import { styled } from '@mui/material/styles';
 import { Box, Typography, Container, Divider } from '@mui/material';
 
 const PageWrapper = styled(Box)({
-    backgroundColor: '#000000',
-    color: 'white',
-    fontFamily: "Arial, sans-serif",
+    backgroundColor: '#FAF9F5',
+    color: '#1A1814',
+    fontFamily: "'Inter', sans-serif",
     minHeight: '100vh',
     width: '100%',
     paddingTop: '80px',
 });
 
-const ContentWrapper = styled(Container)({
-    padding: '60px 24px',
-    maxWidth: '900px !important',
+const ContentWrapper = styled(Box)({
+    padding: '60px 64px',
+    width: '100%',
 });
 
 const PageHeader = styled(Box)({
@@ -24,10 +24,10 @@ const PageHeader = styled(Box)({
 const Title = styled(Typography)({
     fontSize: '48px',
     fontWeight: 700,
-    fontFamily: "Arial, sans-serif !important",
+    fontFamily: "'Inter', sans-serif !important",
     letterSpacing: "normal !important",
     marginBottom: '16px',
-    background: 'linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%)',
+    background: 'linear-gradient(135deg, #1C2B4A 0%, #1A1814 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     '@media (max-width: 600px)': {
@@ -37,7 +37,7 @@ const Title = styled(Typography)({
 
 const Subtitle = styled(Typography)({
     fontSize: '16px',
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B6156',
 });
 
 const Section = styled(Box)({
@@ -45,37 +45,37 @@ const Section = styled(Box)({
     '& h2': {
         fontSize: '24px',
         fontWeight: 700,
-        fontFamily: "Arial, sans-serif !important",
+        fontFamily: "'Inter', sans-serif !important",
         letterSpacing: "normal !important",
         textTransform: "none !important",
-        color: 'rgba(255, 255, 255, 0.95)',
+        color: '#1A1814',
         marginBottom: '20px',
         marginTop: '32px',
     },
     '& p': {
         marginBottom: '16px',
-        color: 'rgba(255, 255, 255, 0.7)',
+        color: '#6B6156',
         fontSize: '16px',
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "'Inter', sans-serif",
         lineHeight: 1.7,
     },
     '& ul': {
         paddingLeft: '24px',
         marginBottom: '24px',
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "'Inter', sans-serif",
         '& li': {
             marginBottom: '10px',
-            color: 'rgba(255, 255, 255, 0.7)',
+            color: '#6B6156',
             fontSize: '16px',
             lineHeight: 1.7,
-            fontFamily: "Arial, sans-serif",
+            fontFamily: "'Inter', sans-serif",
         },
     },
 });
 
 const UpdateDate = styled(Typography)({
     fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#6B6156',
     marginBottom: '24px',
     fontStyle: 'italic',
     textAlign: 'center',
@@ -121,7 +121,7 @@ export const ReturnPolicyPage: React.FC = () => {
                     </p>
                 </Section>
 
-                <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', my: 4 }} />
+                <Divider sx={{ backgroundColor: 'rgba(28, 43, 74, 0.1)', my: 4 }} />
 
                 <Section>
                     <p>

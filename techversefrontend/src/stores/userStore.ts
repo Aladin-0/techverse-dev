@@ -10,6 +10,7 @@ interface User {
   role: string;
   email_notifications: boolean;
   sms_notifications: boolean;
+  has_password: boolean;  // false = Google-only user who hasn't set a password yet
 }
 
 interface UserState {
@@ -24,6 +25,9 @@ interface UserState {
   checkAuthStatus: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  setPassword: (newPassword: string, confirmPassword: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  confirmPasswordReset: (uid: string, token: string, newPassword: string, confirmPassword: string) => Promise<void>;
   setUserFromServer: (user: User) => void;
 }
 
@@ -188,16 +192,10 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Try JWT first; on failure, retry via Axios without JWT (session + CSRF)
-      let response;
-      try {
-        response = await apiClient.patch('/api/users/profile/', data);
-      } catch (jwtError) {
-        // Response interceptor should have removed expired token.
-        response = await apiClient.patch('/api/users/profile/', data);
-      }
+      // The api.ts interceptor handles JWT + CSRF automatically.
+      // A single call is sufficient — no need to double-retry the same request.
+      const response = await apiClient.patch('/api/users/profile/', data);
 
-      // Update the user state with the response data
       set({
         user: response.data,
         loading: false,
@@ -222,27 +220,27 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Try JWT first, then session
-      try {
-        await apiClient.post('/api/users/change-password/', {
-          current_password: currentPassword,
-          new_password: newPassword
-        });
-      } catch (jwtError) {
-        // Response interceptor should have removed expired token.
-        await apiClient.post('/api/users/change-password/', {
-          current_password: currentPassword,
-          new_password: newPassword
-        });
-      }
+      // The api.ts interceptor handles JWT + CSRF in a single call.
+      await apiClient.post('/api/users/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+
+      // IMPORTANT: The backend invalidates the session on password change.
+      // We must clear local auth state and tokens to match the server state.
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
 
       set({
+        user: null,
+        isAuthenticated: false,
         loading: false,
         error: null
       });
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail ||
+        error.response?.data?.error ||
         error.response?.data?.current_password?.[0] ||
         error.response?.data?.new_password?.[0] ||
         'Failed to change password';
@@ -252,6 +250,69 @@ export const useUserStore = create<UserState>((set, get) => ({
         error: errorMessage
       });
 
+      throw error;
+    }
+  },
+
+  setPassword: async (newPassword, confirmPassword) => {
+    set({ loading: true, error: null });
+    try {
+      await apiClient.post('/api/users/set-password/', {
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      // Update has_password in local state so the UI immediately reflects the change
+      const currentUser = get().user;
+      if (currentUser) {
+        set({ user: { ...currentUser, has_password: true }, loading: false, error: null });
+      } else {
+        set({ loading: false, error: null });
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.detail ||
+        'Failed to set password.';
+      set({ loading: false, error: errorMessage });
+      throw error;
+    }
+  },
+
+  requestPasswordReset: async (email) => {
+    set({ loading: true, error: null });
+    try {
+      // dj-rest-auth endpoint — sends reset email
+      await apiClient.post('/api/auth/password/reset/', { email });
+      set({ loading: false, error: null });
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.email?.[0] ||
+        error.response?.data?.detail ||
+        'Failed to send reset email. Please try again.';
+      set({ loading: false, error: errorMessage });
+      throw error;
+    }
+  },
+
+  confirmPasswordReset: async (uid, token, newPassword, confirmPassword) => {
+    set({ loading: true, error: null });
+    try {
+      // dj-rest-auth endpoint — confirms reset with uid + token from email link
+      await apiClient.post('/api/auth/password/reset/confirm/', {
+        uid,
+        token,
+        new_password1: newPassword,
+        new_password2: confirmPassword,
+      });
+      set({ loading: false, error: null });
+    } catch (error: any) {
+      const data = error.response?.data || {};
+      const errorMessage =
+        data?.new_password2?.[0] ||
+        data?.new_password1?.[0] ||
+        data?.token?.[0] ||
+        data?.uid?.[0] ||
+        data?.detail ||
+        'Failed to reset password. The link may have expired.';
+      set({ loading: false, error: errorMessage });
       throw error;
     }
   },

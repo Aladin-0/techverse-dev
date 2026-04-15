@@ -51,7 +51,7 @@ const DashboardContent = styled(Box)({
   '@media (min-width: 900px)': {
     padding: '40px',
   },
-  background: `linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #000000 100%)`,
+  background: `linear-gradient(135deg, #0C0B09 0%, #0E0D0B 25%, #131210 50%, #0E0D0B 75%, #0C0B09 100%)`,
   position: 'relative',
 });
 

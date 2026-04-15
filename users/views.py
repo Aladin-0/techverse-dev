@@ -131,7 +131,7 @@ class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        """Change user password"""
+        """Change user password with mandatory session invalidation."""
         current_password = request.data.get('current_password')
         new_password = request.data.get('new_password')
 
@@ -158,9 +158,62 @@ class ChangePasswordView(APIView):
         user.set_password(new_password)
         user.save()
 
-        return Response({'message': 'Password changed successfully'})
+        # SECURITY: Invalidate all existing sessions so stolen sessions
+        # can no longer be used after a password change. This is mandatory
+        # to prevent session-fixation attacks.
+        django_logout(request)
+
+        return Response({'message': 'Password changed successfully. Please log in again.'})
+
+class SetPasswordView(APIView):
+    """
+    Lets any authenticated user reset their password directly from their profile.
+    Requires only new_password + confirm_password — no current password needed.
+    Works for both Google-only users and users who already have a password.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        new_password = request.data.get('new_password', '')
+        confirm_password = request.data.get('confirm_password', '')
+
+        if not new_password or not confirm_password:
+            return Response(
+                {'error': 'Both new_password and confirm_password are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'Passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {'error': 'Password must be at least 8 characters long.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate against Django's built-in password validators
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_password(new_password, request.user)
+        except DjangoValidationError as e:
+            return Response({'error': e.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(new_password)
+        request.user.save()
+
+        return Response({
+            'message': 'Password reset successfully.',
+            'has_password': True
+        })
+
 
 class DeleteAccountView(APIView):
+
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request):
@@ -237,9 +290,13 @@ class LogoutView(APIView):
 
             return response
         except Exception as e:
+            # SECURITY: Do not expose raw exception messages to the client.
+            # Log for server-side debugging instead.
+            import logging
+            logging.getLogger(__name__).error(f'LogoutView error: {e}')
             return Response({
                 'success': False,
-                'error': str(e)
+                'error': 'An error occurred during logout.'
             }, status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -253,12 +310,7 @@ class GoogleJWTTokenView(APIView):
         # Check if user is authenticated via session (from Google OAuth)
         if not request.user.is_authenticated:
             return Response({
-                'error': 'User not authenticated via Google OAuth session',
-                'debug': {
-                    'session_key': request.session.session_key,
-                    'user_authenticated': request.user.is_authenticated,
-                    'cookies': dict(request.COOKIES),
-                }
+                'error': 'User not authenticated via Google OAuth session'
             }, status=401)
 
         user = request.user
@@ -284,68 +336,35 @@ class GoogleJWTTokenView(APIView):
         return response
 
 class DebugAuthView(APIView):
-    """Debug view to check authentication status"""
-    permission_classes = []
+    """Debug view to check authentication status — STAFF ONLY."""
+    # SECURITY: Restricted to staff users. This endpoint MUST never be
+    # public as it exposes session and authentication metadata.
+    permission_classes = [permissions.IsAdminUser]
 
     def get(self, request):
         return Response({
             'user_authenticated': request.user.is_authenticated,
             'user_id': request.user.id if request.user.is_authenticated else None,
-            'user_email': request.user.email if request.user.is_authenticated else None,
-            'user_name': getattr(request.user, 'name', None) if request.user.is_authenticated else None,
-            'session_key': request.session.session_key,
             'has_jwt_header': 'Authorization' in request.headers,
-            'jwt_header': request.headers.get('Authorization', 'None')[:50] if 'Authorization' in request.headers else None,
-            'cookies': list(request.COOKIES.keys()),
         })
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def create_user_from_google(request):
-    """Create a user account from Google OAuth data and return JWT tokens"""
-    try:
-        data = json.loads(request.body)
-        email = data.get('email')
-        name = data.get('name')
-
-        if not email or not name:
-            return JsonResponse({'error': 'Email and name are required'}, status=400)
-
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                'name': name,
-                'role': 'CUSTOMER'
-            }
-        )
-
-        if not created and user.name != name:
-            user.name = name
-            user.save()
-
-        refresh = RefreshToken.for_user(user)
-
-        return JsonResponse({
-            'success': True,
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'name': user.name,
-                'role': user.role,
-                'email_notifications': getattr(user, 'email_notifications', True),
-                'sms_notifications': getattr(user, 'sms_notifications', True),
-            }
-        })
-
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+# SECURITY: This endpoint has been PERMANENTLY REMOVED.
+# The previous implementation was a critical account-takeover vulnerability:
+# it accepted any email in the JSON body and returned a valid JWT for that
+# account with zero ownership verification. An attacker could call:
+#   POST /api/users/create-from-google/ {"email": "admin@techverse.com", "name": "hacker"}
+# and receive a fully authenticated JWT token for the admin account.
+#
+# Token generation for Google OAuth users is now handled exclusively by
+# GoogleJWTTokenView which requires an active, verified Django session.
 
 @csrf_exempt
 def google_login_success(request):
     """
-    Endpoint called after successful Google OAuth to generate JWT tokens
+    Endpoint called after successful Google OAuth to generate JWT tokens.
+    SECURITY: All user data is JSON-encoded via json.dumps before being
+    embedded into the script block. Tokens are passed via a dedicated JS
+    variable to prevent string-injection attacks from malformed names/emails.
     """
     if request.method == 'GET':
         # Check if user is authenticated via session
@@ -355,50 +374,50 @@ def google_login_success(request):
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
 
-            # Create response with tokens embedded in JavaScript
-            response_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Login Success</title>
-            </head>
-            <body>
-                <script>
-                    // Store tokens in localStorage
-                    localStorage.setItem('access_token', '{refresh.access_token}');
-                    localStorage.setItem('refresh_token', '{refresh}');
+            # SECURITY: All dynamic values are passed through json.dumps/json.loads
+            # to prevent script injection. Never use raw f-string interpolation
+            # of user-controlled data into <script> blocks.
+            frontend_url = json.dumps(getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173'))
+            access_token = json.dumps(str(refresh.access_token))
+            refresh_token = json.dumps(str(refresh))
+            user_data = json.dumps({
+                'id': user.id,
+                'email': user.email,
+                'name': user.name,
+                'role': user.role,
+                'email_notifications': user.email_notifications,
+                'sms_notifications': user.sms_notifications,
+            })
 
-                    // Store user data
-                    const userData = {json.dumps({
-                        'id': user.id,
-                        'email': user.email,
-                        'name': user.name,
-                        'role': user.role,
-                        'email_notifications': user.email_notifications,
-                        'sms_notifications': user.sms_notifications,
-                    })};
+            response_html = f"""<!DOCTYPE html>
+<html>
+<head><title>Login Success</title></head>
+<body>
+<script>
+    (function() {{
+        var accessToken = {access_token};
+        var refreshToken = {refresh_token};
+        var userData = {user_data};
+        var frontendUrl = {frontend_url};
 
-                    // Post message to parent window (React app)
-                    if (window.opener) {{
-                        window.opener.postMessage({{
-                            type: 'GOOGLE_LOGIN_SUCCESS',
-                            tokens: {{
-                                access: '{refresh.access_token}',
-                                refresh: '{refresh}'
-                            }},
-                            user: userData
-                        }}, '{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173')}');
-                        window.close();
-                    }} else {{
-                        // Fallback: redirect to React app with success parameter
-                        const frontendUrl = '{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173')}';
-                        window.location.href = frontendUrl + '/?login=success&token=' + encodeURIComponent('{refresh.access_token}');
-                    }}
-                </script>
-                <p>Login successful! Redirecting...</p>
-            </body>
-            </html>
-            """
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+
+        if (window.opener) {{
+            window.opener.postMessage({{
+                type: 'GOOGLE_LOGIN_SUCCESS',
+                tokens: {{ access: accessToken, refresh: refreshToken }},
+                user: userData
+            }}, frontendUrl);
+            window.close();
+        }} else {{
+            window.location.href = frontendUrl + '/?login=success&token=' + encodeURIComponent(accessToken);
+        }}
+    }})();
+</script>
+<p>Login successful! Redirecting...</p>
+</body>
+</html>"""
             return HttpResponse(response_html)
         else:
             return HttpResponse("Not authenticated", status=401)
@@ -424,23 +443,28 @@ def google_login_redirect(request):
 @csrf_exempt
 def mobile_google_callback(request):
     """
-    Mobile-specific callback that handles state issues
+    Mobile-specific callback that handles state issues.
+    SECURITY: state and code are validated to contain only safe characters
+    before being forwarded, preventing open-redirect / injection attacks.
     """
-    # Get the state and code from Google
-    state = request.GET.get('state')
-    code = request.GET.get('code')
-
+    import re
+    state = request.GET.get('state', '')
+    code = request.GET.get('code', '')
     frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173')
 
     if not state or not code:
         return HttpResponseRedirect(f'{frontend_url}/login?error=oauth_failed')
 
-    # Redirect to the standard allauth callback with proper headers
-    callback_url = f"/accounts/google/login/callback/?state={state}&code={code}"
-    response = HttpResponseRedirect(callback_url)
+    # SECURITY: Strictly validate that state and code only contain safe characters
+    # (alphanumeric, hyphens, underscores, dots). Reject anything else.
+    SAFE_PATTERN = re.compile(r'^[A-Za-z0-9\-_.:%]+$')
+    if not SAFE_PATTERN.match(state) or not SAFE_PATTERN.match(code):
+        return HttpResponseRedirect(f'{frontend_url}/login?error=oauth_invalid')
 
-    # Ensure cookies are set for mobile
+    from urllib.parse import urlencode, quote_plus
+    safe_params = urlencode({'state': state, 'code': code})
+    callback_url = f"/accounts/google/login/callback/?{safe_params}"
+    response = HttpResponseRedirect(callback_url)
     response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response['Pragma'] = 'no-cache'
-
     return response

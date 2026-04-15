@@ -8,7 +8,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from decimal import Decimal
-from .models import Address, ProductCategory, Product, ProductImage, ProductSpecification, Order, OrderItem
+from .models import Address, ProductCategory, Product, ProductImage, ProductSpecification, Order, OrderItem, StoreBanner
 
 User = get_user_model()
 
@@ -162,7 +162,7 @@ class ProductSpecificationInline(admin.TabularInline):
 
 # Enhanced Product admin
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'brand', 'price', 'stock', 'is_featured', 'is_active', 'main_image_preview')
+    list_display = ('name', 'category', 'brand', 'price', 'is_featured', 'is_active', 'main_image_preview')
     list_filter = ('category', 'brand', 'is_featured', 'is_active', 'created_at')
     search_fields = ('name', 'description', 'brand', 'model_number')
     prepopulated_fields = {'slug': ('name',)}
@@ -172,11 +172,15 @@ class ProductAdmin(admin.ModelAdmin):
         ('Basic Information', {
             'fields': ('name', 'slug', 'category', 'brand', 'model_number')
         }),
+        ('Amazon Affiliate', {
+            'fields': ('is_amazon_affiliate', 'amazon_affiliate_link'),
+            'description': 'Check the box and provide an Amazon link to automatically fetch details and photos on save.'
+        }),
         ('Description & Media', {
             'fields': ('description', 'image', 'main_image_preview', 'features')
         }),
         ('Pricing & Inventory', {
-            'fields': ('price', 'stock', 'delivery_time_info')
+            'fields': ('price', 'delivery_time_info')
         }),
         ('Product Details', {
             'fields': ('weight', 'dimensions', 'warranty_period')
@@ -229,3 +233,22 @@ admin.site.register(Product, ProductAdmin)
 admin.site.register(ProductImage, ProductImageAdmin)
 admin.site.register(ProductSpecification, ProductSpecificationAdmin)
 admin.site.register(Order, OrderAdmin)
+
+
+class StoreBannerAdmin(admin.ModelAdmin):
+    list_display = ('order', 'banner_preview', 'button_text', 'product', 'is_active')
+    list_display_links = ('banner_preview',)
+    list_filter = ('is_active',)
+    list_editable = ('order', 'is_active')
+    ordering = ['order']
+
+    def banner_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width: 200px; height: 60px; object-fit: cover; border-radius: 6px;" />',
+                obj.image.url
+            )
+        return "No image"
+    banner_preview.short_description = "Preview"
+
+admin.site.register(StoreBanner, StoreBannerAdmin)

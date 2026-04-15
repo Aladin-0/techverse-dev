@@ -11,6 +11,8 @@ interface Product {
   category: {
     name: string;
   };
+  is_amazon_affiliate?: boolean;
+  amazon_affiliate_link?: string;
 }
 
 interface CartItem {

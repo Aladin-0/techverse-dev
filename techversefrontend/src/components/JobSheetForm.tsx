@@ -52,13 +52,13 @@ const StyledTextField = styled(TextField)({
       borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     '&.Mui-focused fieldset': {
-      borderColor: '#60a5fa',
+      borderColor: '#1C2B4A',
     },
   },
   '& .MuiInputLabel-root': {
     color: 'rgba(255, 255, 255, 0.7)',
     '&.Mui-focused': {
-      color: '#60a5fa',
+      color: '#1C2B4A',
     },
   },
   '& .MuiInputBase-input': {
@@ -68,8 +68,8 @@ const StyledTextField = styled(TextField)({
 
 const PremiumButton = styled(Button)({
   backgroundColor: 'rgba(96, 165, 250, 0.15)',
-  border: '1px solid rgba(96, 165, 250, 0.3)',
-  color: '#60a5fa',
+  border: '1px solid rgba(28, 43, 74, 0.2)',
+  color: '#1C2B4A',
   borderRadius: '12px',
   padding: '10px 24px',
   fontSize: '14px',
@@ -235,7 +235,7 @@ export const JobSheetForm: React.FC<JobSheetFormProps> = ({
           </Alert>
         )}
 
-        <Typography variant="h6" sx={{ mb: 2, color: '#60a5fa', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+        <Typography variant="h6" sx={{ mb: 2, color: '#1C2B4A', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Customer Information
         </Typography>
         <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -252,7 +252,7 @@ export const JobSheetForm: React.FC<JobSheetFormProps> = ({
 
         <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
 
-        <Typography variant="h6" sx={{ mb: 2, color: '#60a5fa', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+        <Typography variant="h6" sx={{ mb: 2, color: '#1C2B4A', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Equipment Details
         </Typography>
         <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -264,7 +264,7 @@ export const JobSheetForm: React.FC<JobSheetFormProps> = ({
 
         <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
 
-        <Typography variant="h6" sx={{ mb: 2, color: '#60a5fa', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+        <Typography variant="h6" sx={{ mb: 2, color: '#1C2B4A', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Problem & Work Performed
         </Typography>
         <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -274,7 +274,7 @@ export const JobSheetForm: React.FC<JobSheetFormProps> = ({
 
         <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
 
-        <Typography variant="h6" sx={{ mb: 2, color: '#60a5fa', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+        <Typography variant="h6" sx={{ mb: 2, color: '#1C2B4A', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Time Record
         </Typography>
         <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -286,7 +286,7 @@ export const JobSheetForm: React.FC<JobSheetFormProps> = ({
         <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
 
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" sx={{ color: '#60a5fa', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+          <Typography variant="h6" sx={{ color: '#1C2B4A', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
             Materials Used
           </Typography>
           <PremiumButton onClick={handleAddMaterial} size="small">
@@ -295,7 +295,7 @@ export const JobSheetForm: React.FC<JobSheetFormProps> = ({
         </Box>
 
         {materials.length === 0 ? (
-          <Alert severity="info" sx={{ mb: 2, backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>
+          <Alert severity="info" sx={{ mb: 2, backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#1C2B4A' }}>
             No materials added.
           </Alert>
         ) : (

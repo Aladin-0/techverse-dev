@@ -19,7 +19,11 @@ RUN rm -f package-lock.json && \
 # Copy the rest of the frontend code
 COPY techversefrontend/ ./
 
-# Build the app
+# Accept VITE_ build args from docker-compose / CI — these get baked into the bundle
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+# Build the app (Vite will embed VITE_* env vars at build time)
 RUN npm run build
 
 # Stage 2: Serve with Nginx

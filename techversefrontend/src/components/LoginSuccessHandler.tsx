@@ -121,14 +121,14 @@ export const LoginSuccessHandler = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#000',
+          backgroundColor: '#FAF9F5',
           zIndex: 9999,
         }}
       >
         <CircularProgress
           size={60}
           sx={{
-            color: '#60a5fa',
+            color: '#1C2B4A',
             mb: 3
           }}
         />
