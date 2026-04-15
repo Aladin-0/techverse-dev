@@ -29,8 +29,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div style={{
           padding: '20px',
-          backgroundColor: '#000',
-          color: 'white',
+          backgroundColor: '#FAF9F5',
+          color: '#1A1814',
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
@@ -44,7 +44,7 @@ class ErrorBoundary extends React.Component<Props, State> {
             style={{
               padding: '10px 20px',
               backgroundColor: '#333',
-              color: 'white',
+              color: '#1A1814',
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer'

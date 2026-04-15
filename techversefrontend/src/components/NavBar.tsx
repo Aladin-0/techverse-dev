@@ -1,332 +1,466 @@
-import { useState, useEffect } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-  Container,
-  IconButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  Badge,
-  Fade,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
-import { styled } from '@mui/material/styles';
-
-// Icons
-import PersonIcon from '@mui/icons-material/Person';
-import LogoutIcon from '@mui/icons-material/Logout';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import HistoryIcon from '@mui/icons-material/History';
-import HomeIcon from '@mui/icons-material/Home';
-import StorefrontIcon from '@mui/icons-material/Storefront';
-import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
-import CloseIcon from '@mui/icons-material/Close';
-import GridViewIcon from '@mui/icons-material/GridView';
-import InfoIcon from '@mui/icons-material/Info';
-import ContactSupportIcon from '@mui/icons-material/ContactSupport';
-
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate, Link as RouterLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useUserStore } from '../stores/userStore';
 import { useCartStore } from '../stores/cartStore';
-import { ShoppingCart } from './ShoppingCart';
-import logoImage from '../components/Tlogo.png';
 
-// --- STYLED COMPONENTS ---
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
+import { Badge, Tooltip } from '@mui/material';
+import { Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: 'transparent',
-  backdropFilter: 'none',
-  boxShadow: 'none',
-  position: 'fixed',
-  top: 0,
-  zIndex: 1000,
-  transition: 'all 0.4s ease',
-  '&.scrolled': {
-    backdropFilter: 'blur(20px)',
-    backgroundColor: 'rgba(8, 8, 8, 0.7)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-  },
-}));
+// ── Design tokens ────────────────────────────────────────────────────────────
+const ACCENT       = '#1C2B4A';
+const AMBER        = '#D4922A';
+const TEXT         = '#1A1814';
+const MUTED        = '#8A8279';
 
-const MobileDockWrapper = styled(Box)(({ theme }) => ({
-  display: 'none',
-  [theme.breakpoints.down('md')]: {
-    display: 'flex',
-    position: 'fixed',
-    bottom: '24px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '92%',
-    maxWidth: '420px',
-    height: '70px',
-    backgroundColor: 'rgba(12, 12, 12, 0.8)',
-    backdropFilter: 'blur(30px)',
-    borderRadius: '35px',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-    zIndex: 2500, // Above everything including drawers
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    padding: '0 10px',
-    boxShadow: '0 25px 50px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1)',
-  }
-}));
-
-const DockItem = styled(IconButton)(({ theme }) => ({
-  color: 'rgba(255, 255, 255, 0.5)',
-  padding: '14px',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&.active': {
-    color: '#60a5fa',
-    transform: 'translateY(-6px)',
-    '& svg': { filter: 'drop-shadow(0 0 10px rgba(96, 165, 250, 0.8))' }
-  },
-  '&:active': { transform: 'scale(0.8)' }
-}));
-
-const CentralActionButton = styled(Box)(({ theme }) => ({
-  width: '64px',
-  height: '64px',
-  borderRadius: '32px',
-  background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginTop: '-40px',
-  border: '6px solid #080808',
-  boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5)',
-  cursor: 'pointer',
-  zIndex: 2501,
-  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-  '&:active': { transform: 'scale(0.85) translateY(5px)' }
-}));
-
-const MobileOverlay = styled(Box)({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: 'rgba(5, 5, 5, 0.94)',
-  backdropFilter: 'blur(25px)',
-  zIndex: 2400,
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: '30px'
-});
-
-const GridMenuButton = styled(Button)({
-  flexDirection: 'column',
-  height: '115px',
-  width: '100%',
-  borderRadius: '26px',
-  backgroundColor: 'rgba(255,255,255,0.03)',
-  color: 'white',
-  border: '1px solid rgba(255,255,255,0.08)',
-  textTransform: 'none',
-  '&:active': { transform: 'scale(0.95)', backgroundColor: 'rgba(255,255,255,0.07)' },
-  '& svg': { fontSize: '30px', marginBottom: '10px', color: '#60a5fa' }
-});
-
-// --- MAIN COMPONENT ---
+const NAV_LINKS = [
+  { label: 'Home',            to: '/' },
+  { label: 'Store',           to: '/store' },
+  { label: 'Services',        to: '/services' },
+  { label: 'Orders',          to: '/my-orders' },
+  { label: 'History',         to: '/service-history' },
+];
 
 export const NavBar = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate        = useNavigate();
+  const location        = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { isAuthenticated, user } = useUserStore();
+  const { openCart, closeCart, getTotalItems } = useCartStore();
+  const totalItems      = getTotalItems();
+  const [scrolled, setScrolled]     = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile]     = useState(window.innerWidth < 1024);
+  const [searchValue, setSearchValue] = useState(searchParams.get('q') || '');
+  const searchInputRef  = useRef<HTMLInputElement>(null);
+  const navRef          = useRef<HTMLDivElement>(null);
 
-  const [scrolled, setScrolled] = useState(false);
-  const [menuExpanded, setMenuExpanded] = useState(false);
-  const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null);
-
-  const { isAuthenticated, user, logout } = useUserStore();
-  const { openCart, closeCart, getTotalItems } = useCartStore(); // Added closeCart
-  const totalItems = getTotalItems();
-
-  // 1. UNIVERSAL CLEANUP: Close everything whenever the URL changes
-  useEffect(() => {
-    setMenuExpanded(false);
-    closeCart();
-    setProfileAnchor(null);
-  }, [location.pathname, closeCart]);
+  useEffect(() => { closeCart(); }, [location.pathname, closeCart]);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const fn = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  // 2. NAV INTERCEPTOR: The "Bug-Killer" function
-  const cleanNavigate = (path: string) => {
-    setMenuExpanded(false);
-    closeCart();
-    navigate(path);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+
+  useEffect(() => {
+    setSearchValue(searchParams.get('q') || '');
+    if (searchParams.get('q')) setSearchOpen(true);
+  }, [searchParams]);
+
+  const handleSearchToggle = () => {
+    if (searchOpen) {
+      if (!searchValue) setSearchOpen(false);
+    } else {
+      setSearchOpen(true);
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
   };
 
-  const handleToggleCart = () => {
-    setMenuExpanded(false);
-    openCart();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchValue(val);
+    if (location.pathname === '/store') {
+      const p = new URLSearchParams(searchParams);
+      val ? p.set('q', val) : p.delete('q');
+      setSearchParams(p);
+    }
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchValue) { setSearchOpen(false); return; }
+    setSearchOpen(false);
+    if (location.pathname !== '/store') {
+      navigate(`/store?q=${encodeURIComponent(searchValue)}`);
+    } else {
+      const p = new URLSearchParams(searchParams);
+      p.set('q', searchValue);
+      setSearchParams(p);
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchOpen && navRef.current && !navRef.current.contains(e.target as Node))
+        setSearchOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [searchOpen]);
+
+  // Completely hide global navbar on Mobile PDP to match Flipkart behavior
+  // (PDP has its own literal substitute header)
+  if (isMobile && location.pathname.startsWith('/product/')) return null;
 
   return (
-    <>
-      <StyledAppBar className={scrolled ? 'scrolled' : ''}>
-        <Toolbar sx={{
-          py: { xs: 0, md: 1.5 },
-          minHeight: { xs: '56px', md: '64px' }
-        }}>
-          <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <RouterLink to="/" style={{ textDecoration: 'none' }} onClick={() => cleanNavigate('/')}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <img src={logoImage} alt="Logo" style={{ width: '42px', height: '42px' }} />
-                <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.5, color: 'white', display: { xs: 'none', sm: 'block' } }}>
-                  TECHVERSE
-                </Typography>
-              </Box>
-            </RouterLink>
-
-            {!isMobile && (
-              <Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                {['Store', 'Services', 'About'].map((item) => (
-                  <Button
-                    key={item}
-                    component={RouterLink}
-                    to={`/${item.toLowerCase()}`}
-                    sx={{ color: '#A3A3A3', textTransform: 'none', fontWeight: 500, '&:hover': { color: 'white' } }}
-                  >
-                    {item}
-                  </Button>
-                ))}
-
-                <IconButton onClick={openCart} sx={{ color: 'white' }}>
-                  <Badge badgeContent={totalItems} color="primary" sx={{ '& .MuiBadge-badge': { fontWeight: 700 } }}>
-                    <ShoppingCartIcon />
-                  </Badge>
-                </IconButton>
-
-                {isAuthenticated ? (
-                  <Button
-                    onClick={(e) => setProfileAnchor(e.currentTarget)}
-                    sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '14px', px: 2, py: 1, backdropFilter: 'blur(10px)' }}
-                  >
-                    <Avatar sx={{ width: 26, height: 26, mr: 1.5, bgcolor: '#3b82f6', fontSize: '12px', fontWeight: 700 }}>
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </Avatar>
-                    {user?.name.split(' ')[0]}
-                  </Button>
-                ) : (
-                  <Button component={RouterLink} to="/login" variant="contained" sx={{ borderRadius: '12px', px: 3, fontWeight: 700, textTransform: 'none' }}>
-                    Login
-                  </Button>
-                )}
-              </Box>
-            )}
-          </Container>
-        </Toolbar>
-      </StyledAppBar>
-
-      {/* --- INNOVATIVE MOBILE DOCK (Fixed & Optimized) --- */}
-      <MobileDockWrapper>
-        <DockItem onClick={() => cleanNavigate('/')} className={isActive('/') ? 'active' : ''}>
-          <HomeIcon />
-        </DockItem>
-        <DockItem onClick={() => cleanNavigate('/store')} className={isActive('/store') ? 'active' : ''}>
-          <StorefrontIcon />
-        </DockItem>
-
-        <CentralActionButton onClick={() => { closeCart(); setMenuExpanded(!menuExpanded); }}>
-          {menuExpanded ? <CloseIcon sx={{ color: 'white', fontSize: '32px' }} /> : <GridViewIcon sx={{ color: 'white', fontSize: '32px' }} />}
-        </CentralActionButton>
-
-        <DockItem onClick={handleToggleCart} sx={{ color: totalItems > 0 ? '#60a5fa' : 'inherit' }}>
-          <Badge badgeContent={totalItems} color="error" overlap="circular">
-            <ShoppingCartIcon />
-          </Badge>
-        </DockItem>
-
-        <DockItem onClick={() => cleanNavigate(isAuthenticated ? '/profile' : '/login')} className={isActive('/profile') ? 'active' : ''}>
-          {isAuthenticated ? (
-            <Avatar sx={{ width: 28, height: 28, fontSize: '12px', bgcolor: '#3b82f6', fontWeight: 800 }}>
-              {user?.name?.charAt(0).toUpperCase()}
-            </Avatar>
-          ) : (
-            <PersonIcon />
-          )}
-        </DockItem>
-      </MobileDockWrapper>
-
-      {/* --- MOBILE FULLSCREEN OVERLAY --- */}
-      <Fade in={menuExpanded} unmountOnExit>
-        <MobileOverlay>
-          <Typography variant="h4" sx={{ mb: 6, fontWeight: 900, color: 'white', letterSpacing: -1.5 }}>
-            EXPLORE
-          </Typography>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5, width: '100%', maxWidth: '350px' }}>
-            {[
-              { label: 'Store', icon: <StorefrontIcon />, path: '/store' },
-              { label: 'Services', icon: <MiscellaneousServicesIcon />, path: '/services' },
-              { label: 'My Orders', icon: <HistoryIcon />, path: '/my-orders' },
-              { label: 'About Us', icon: <InfoIcon />, path: '/about' },
-              { label: 'Contact', icon: <ContactSupportIcon />, path: '/contact' },
-              { label: 'Account', icon: <PersonIcon />, path: '/profile' },
-            ].map((item) => (
-              <GridMenuButton key={item.label} onClick={() => cleanNavigate(item.path)}>
-                {item.icon}
-                <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.9 }}>{item.label}</Typography>
-              </GridMenuButton>
-            ))}
-          </Box>
-
-          {isAuthenticated && (
-            <Button
-              onClick={() => { logout(); cleanNavigate('/'); }}
-              sx={{ mt: 8, color: '#f87171', fontWeight: 800, fontSize: '1.1rem' }}
-              startIcon={<LogoutIcon />}
-            >
-              LOGOUT
-            </Button>
-          )}
-        </MobileOverlay>
-      </Fade>
-
-      {/* Desktop Profile Menu */}
-      <Menu
-        anchorEl={profileAnchor}
-        open={Boolean(profileAnchor)}
-        onClose={() => setProfileAnchor(null)}
-        disableScrollLock
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(10,10,10,0.96)',
-            color: 'white',
-            borderRadius: '20px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            mt: 1.5,
-            minWidth: 200,
-            backdropFilter: 'blur(15px)'
-          }
+    <nav style={{
+      position: 'fixed', top: 0, width: '100%', zIndex: 1000,
+      padding: isMobile ? '0' : (scrolled ? '12px 32px' : '20px 32px'),
+      transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      <div
+        ref={navRef}
+        style={isMobile ? {
+          width: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: '#fff',
+          padding: '12px 16px',
+          borderBottom: '1px solid #E0E0E0',
+          boxShadow: scrolled ? '0 2px 4px rgba(0,0,0,0.04)' : 'none',
+        } : {
+          maxWidth: 1320, margin: '0 auto',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: scrolled ? 'rgba(250,249,245,0.88)' : 'rgba(250,249,245,0.6)',
+          backdropFilter: 'blur(24px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+          border: '1px solid rgba(0,0,0,0.05)',
+          borderRadius: 60,
+          padding: '10px 10px 10px 32px',
+          position: 'relative',
+          boxShadow: scrolled
+            ? '0 4px 32px rgba(28,43,74,0.06), 0 1px 3px rgba(28,43,74,0.04)'
+            : '0 2px 16px rgba(28,43,74,0.03)',
+          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        <MenuItem onClick={() => cleanNavigate('/profile')} sx={{ py: 1.5, fontWeight: 600 }}>My Profile</MenuItem>
-        <MenuItem onClick={() => cleanNavigate('/my-orders')} sx={{ py: 1.5, fontWeight: 600 }}>Order History</MenuItem>
-        <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)', my: 1 }} />
-        <MenuItem onClick={() => { logout(); cleanNavigate('/'); }} sx={{ color: '#f87171', py: 1.5, fontWeight: 700 }}>Logout</MenuItem>
-      </Menu>
+        {/* Logo */}
+        <RouterLink to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: isMobile ? 6 : 10, background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontSize: isMobile ? 14 : 16, fontWeight: 800, letterSpacing: '-0.05em' }}>T</span>
+          </div>
+          <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, letterSpacing: '-0.04em', color: TEXT, lineHeight: 1 }}>
+            Tech<span style={{ color: ACCENT, fontWeight: 800 }}>Verse</span>
+          </span>
+        </RouterLink>
 
-      <ShoppingCart />
-      {/* Spacer to prevent dock from covering bottom content */}
-      <Box sx={{ display: { xs: 'block', md: 'none' }, height: '120px' }} />
-    </>
+        {/* Nav links — hidden on mobile via inline style so it beats specificity of inline display:flex */}
+        <div
+          className="max-lg:!hidden"
+          style={{ display: isMobile ? 'none' : 'flex', gap: 2, alignItems: 'center' }}
+        >
+          {NAV_LINKS.map(({ label, to }) => {
+            const isActive = to === '/' ? location.pathname === '/' : (location.pathname === to || location.pathname.startsWith(to + '/'));
+            return (
+              <RouterLink
+                key={label}
+                to={to}
+                style={{
+                  color: isActive ? TEXT : MUTED,
+                  textDecoration: 'none',
+                  fontSize: 14,
+                  fontWeight: isActive ? 600 : 500,
+                  padding: '10px 18px',
+                  borderRadius: 24,
+                  background: isActive ? 'rgba(28,43,74,0.06)' : 'transparent',
+                  transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '-0.01em',
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = TEXT;
+                    e.currentTarget.style.background = 'rgba(28,43,74,0.04)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = MUTED;
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
+              >
+                {label}
+              </RouterLink>
+            );
+          })}
+        </div>
+
+        {/* Mobile Right Actions: Cart, Profile, Hamburger — visible ONLY on mobile */}
+        {isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Auth/Profile */}
+            {isAuthenticated ? (
+               <button onClick={() => navigate('/profile')} style={{ background: 'transparent', border: 'none', color: TEXT, padding: 0, cursor: 'pointer', display: 'flex' }}>
+                 <PersonIcon sx={{ fontSize: 24, color: '#333' }} />
+               </button>
+            ) : (
+               <button onClick={() => navigate('/login')} style={{ background: 'transparent', border: 'none', color: ACCENT, padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: '0.02em' }}>
+                 Login
+               </button>
+            )}
+
+            {/* Cart */}
+            <button onClick={openCart} style={{ background: 'transparent', border: 'none', color: TEXT, padding: 0, cursor: 'pointer', display: 'flex' }}>
+               <Badge badgeContent={totalItems} sx={{ '& .MuiBadge-badge': { background: '#D4922A', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8 } }}>
+                 <ShoppingCartIcon sx={{ fontSize: 21, color: '#333' }} />
+               </Badge>
+            </button>
+            
+            {/* Hamburger Menu (Animated Premium Icon) */}
+            <button
+               onClick={() => setMobileMenuOpen(true)}
+               style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', marginLeft: 4, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <div style={{ width: 20, height: 14, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <motion.span animate={mobileMenuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }} style={{ display: 'block', width: '100%', height: 2, background: '#333', borderRadius: 2 }} />
+                <motion.span animate={mobileMenuOpen ? { opacity: 0, x: 10 } : { opacity: 1, x: 0 }} transition={{ duration: 0.2 }} style={{ display: 'block', width: '100%', height: 2, background: '#333', borderRadius: 2 }} />
+                <motion.span animate={mobileMenuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }} style={{ display: 'block', width: '100%', height: 2, background: '#333', borderRadius: 2 }} />
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Desktop Right actions — hidden on mobile */}
+        <div className="max-lg:!hidden" style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+
+          {/* Search */}
+          <form
+            onSubmit={handleSearchSubmit}
+            style={{
+              display: 'flex', alignItems: 'center',
+              background: searchOpen ? 'rgba(28,43,74,0.05)' : 'transparent',
+              borderRadius: 24,
+              border: searchOpen ? '1px solid rgba(28,43,74,0.1)' : '1px solid transparent',
+              padding: searchOpen ? '0 14px' : '0',
+              width: searchOpen ? '260px' : '42px',
+              height: 42,
+              transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              overflow: 'hidden',
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleSearchToggle}
+              style={{ background: 'transparent', border: 'none', color: MUTED, cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'color .2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = TEXT}
+              onMouseLeave={e => e.currentTarget.style.color = MUTED}
+            >
+              <SearchIcon sx={{ fontSize: 19 }} />
+            </button>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search products..."
+              value={searchValue}
+              onChange={handleSearchChange}
+              style={{
+                width: searchOpen ? '100%' : '0px',
+                background: 'transparent', border: 'none', outline: 'none',
+                color: TEXT, padding: searchOpen ? '8px 6px' : '0',
+                fontSize: 14, fontWeight: 500,
+                opacity: searchOpen ? 1 : 0,
+                transition: 'all 0.3s ease',
+                pointerEvents: searchOpen ? 'auto' : 'none',
+              }}
+            />
+            {searchOpen && searchValue && (
+              <button
+                type="button"
+                onClick={() => { setSearchValue(''); if (location.pathname === '/store') setSearchParams({}); }}
+                style={{ background: 'transparent', border: 'none', color: MUTED, cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+              >
+                <CloseIcon sx={{ fontSize: 14 }} />
+              </button>
+            )}
+          </form>
+
+          {/* Cart */}
+          <button
+            onClick={openCart}
+            style={{
+              background: 'transparent', border: 'none', color: MUTED, cursor: 'pointer',
+              padding: '8px 10px', borderRadius: 22, display: 'flex', alignItems: 'center',
+              opacity: searchOpen ? 0.5 : 1, transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = TEXT; e.currentTarget.style.background = 'rgba(28,43,74,0.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = MUTED; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <Badge
+              badgeContent={totalItems}
+              sx={{ '& .MuiBadge-badge': { background: AMBER, color: '#fff', fontSize: 9, fontWeight: 700, minWidth: 16, height: 16, borderRadius: 8 } }}
+            >
+              <ShoppingCartIcon sx={{ fontSize: 20 }} />
+            </Badge>
+          </button>
+
+          {/* Auth button */}
+          {isAuthenticated ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={() => navigate('/profile')}
+                style={{
+                  background: 'rgba(28,43,74,0.06)',
+                  color: TEXT,
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: 26,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  letterSpacing: '-0.01em',
+                  opacity: searchOpen ? 0.4 : 1,
+                  transition: 'all 0.25s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(28,43,74,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(28,43,74,0.06)'; }}
+              >
+                {user?.name?.split(' ')[0] || 'Account'}
+              </button>
+              <Tooltip title="Logout">
+                <button
+                  onClick={() => useUserStore.getState().logout()}
+                  style={{
+                    background: 'transparent',
+                    color: MUTED,
+                    border: 'none',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    opacity: searchOpen ? 0.4 : 1,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.background = 'rgba(220,38,38,0.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = MUTED; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <LogoutIcon sx={{ fontSize: 20 }} />
+                </button>
+              </Tooltip>
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                background: ACCENT,
+                color: '#fff',
+                border: 'none',
+                padding: '10px 26px',
+                borderRadius: 26,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: 'pointer',
+                letterSpacing: '-0.01em',
+                opacity: searchOpen ? 0.4 : 1,
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: '0 2px 8px rgba(28,43,74,0.2)',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#243660'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(28,43,74,0.25)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(28,43,74,0.2)'; }}
+            >
+              Sign In
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Menu Drawer (Premium Side Navigation) */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1999 }}
+            />
+            {/* Slide-in drawer */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              style={{
+                position: 'fixed', top: 0, left: 0, bottom: 0, width: '85%', maxWidth: 320,
+                background: '#fff', zIndex: 2000, display: 'flex', flexDirection: 'column',
+                boxShadow: '4px 0 24px rgba(0,0,0,0.1)', fontFamily: "'Inter', sans-serif"
+              }}
+            >
+              {/* Header Profile / Logo Block */}
+              <div style={{ background: '#F8F9FA', padding: '32px 24px 24px', borderBottom: '1px solid #EAEAEA' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isAuthenticated ? 24 : 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>T</span>
+                    </div>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: TEXT, letterSpacing: '-0.04em' }}>TechVerse</span>
+                  </div>
+                  <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: MUTED, padding: 4 }}>
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                {isAuthenticated && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 22, background: 'rgba(28,43,74,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACCENT }}>
+                      <PersonIcon sx={{ fontSize: 24 }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{user?.name || 'My Account'}</span>
+                      <span style={{ fontSize: 12, color: MUTED }}>{user?.email || 'View Profile'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Links */}
+              <div style={{ flex: 1, padding: '16px 24px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                {NAV_LINKS.map(({ label, to }) => (
+                  <RouterLink
+                    key={label}
+                    to={to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      textDecoration: 'none', color: TEXT, padding: '16px 0', borderBottom: '1px solid #F0F0F0',
+                      fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em'
+                    }}
+                  >
+                    {label}
+                    <span style={{ color: '#ccc', fontSize: 18 }}>›</span>
+                  </RouterLink>
+                ))}
+              </div>
+
+              {/* Bottom Actions */}
+              <div style={{ padding: 24, borderTop: '1px solid #EAEAEA', background: '#FAFAFA' }}>
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => { useUserStore.getState().logout(); setMobileMenuOpen(false); }}
+                    style={{ width: '100%', padding: '12px', borderRadius: 8, background: '#fff', border: '1px solid #E0E0E0', color: '#DC2626', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <LogoutIcon sx={{ fontSize: 18 }} /> Sign Out
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}
+                    style={{ width: '100%', padding: '14px', borderRadius: 10, background: ACCENT, border: 'none', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 12px rgba(28,43,74,0.2)' }}
+                  >
+                    Sign In or Join
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </nav>
   );
 };

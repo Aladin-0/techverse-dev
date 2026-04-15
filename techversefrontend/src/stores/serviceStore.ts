@@ -17,45 +17,71 @@ interface ServiceCategory {
 
 interface ServiceState {
   categories: ServiceCategory[];
+  trendingCategories: ServiceCategory[];
   loading: boolean;
   error: string | null;
   fetchCategories: () => Promise<void>;
+  fetchTrendingCategories: () => Promise<void>;
 }
 
 export const useServiceStore = create<ServiceState>((set) => ({
   categories: [],
+  trendingCategories: [],
   loading: false,
   error: null,
-  
+
   fetchCategories: async () => {
     set({ loading: true, error: null });
     try {
-      console.log('Fetching service categories...');
-      
-      // Use apiClient instead of direct axios to include auth headers
-      const response = await apiClient.get('/services/api/categories/', {
+      const response = await apiClient.get('/api/service-categories/', {
         timeout: 5000
       });
-      
-      console.log('Service categories response:', response.data);
-      
-      // Validate response data
+
       if (!Array.isArray(response.data)) {
         throw new Error('Invalid response format: expected array');
       }
-      
-      set({ 
+
+      set({
         categories: response.data,
         loading: false,
         error: null
       });
     } catch (error: any) {
       console.error("Failed to fetch service categories:", error);
-      const errorMessage = error?.response?.data?.error || 
-                          error?.message || 
-                          'Failed to load service categories';
-      set({ 
-        categories: [], 
+      const errorMessage = error?.response?.data?.error ||
+        error?.message ||
+        'Failed to load service categories';
+      set({
+        categories: [],
+        loading: false,
+        error: errorMessage
+      });
+    }
+  },
+
+  fetchTrendingCategories: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await apiClient.get('/api/trending-services/', {
+        timeout: 5000
+      });
+
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid response format: expected array');
+      }
+
+      set({
+        trendingCategories: response.data,
+        loading: false,
+        error: null
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch trending service categories:", error);
+      const errorMessage = error?.response?.data?.error ||
+        error?.message ||
+        'Failed to load trending categories';
+      set({
+        trendingCategories: [],
         loading: false,
         error: errorMessage
       });

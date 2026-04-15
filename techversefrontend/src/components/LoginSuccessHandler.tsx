@@ -20,14 +20,14 @@ export const LoginSuccessHandler = () => {
 
       // Handle OAuth errors
       if (error) {
-        console.error('❌ OAuth error:', error);
+
         const errorMessage = searchParams.get('message') || 'Authentication failed';
-        
+
         // Clean URL and redirect to login
         window.history.replaceState({}, document.title, '/login');
-        navigate('/login', { 
-          replace: true, 
-          state: { error: errorMessage } 
+        navigate('/login', {
+          replace: true,
+          state: { error: errorMessage }
         });
         return;
       }
@@ -35,73 +35,71 @@ export const LoginSuccessHandler = () => {
       // Handle successful OAuth callback
       if (loginStatus === 'success' && !processing) {
         setProcessing(true);
-        console.log('🔐 Google OAuth login detected');
+
 
         // Case 1: Tokens provided in URL (preferred method)
         if (accessToken && refreshToken) {
-          console.log('✅ Tokens received from backend');
-          console.log('  - Access token length:', accessToken.length);
-          console.log('  - Refresh token length:', refreshToken.length);
-          
+
+
           try {
             // Store tokens
             localStorage.setItem('access_token', accessToken);
             localStorage.setItem('refresh_token', refreshToken);
-            console.log('✓ Tokens stored in localStorage');
+
 
             // Fetch user data using the new token
             await checkAuthStatus();
-            console.log('✓ User data loaded successfully');
+
 
             // Clean up URL
             window.history.replaceState({}, document.title, '/');
 
             // Show success message
-            console.log('✓ Google OAuth login complete, redirecting to home...');
-            
+
+
             // Redirect to home
             navigate('/', { replace: true });
-            
+
           } catch (error) {
-            console.error('❌ Failed to fetch user data:', error);
-            
+
+
             // Clear tokens if auth fails
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
-            
+
             // Redirect to login
-            navigate('/login', { 
+            navigate('/login', {
               replace: true,
               state: { error: 'Failed to complete authentication. Please try again.' }
             });
           }
-        } 
+        }
         // Case 2: No tokens in URL, try session authentication
         else {
-          console.warn('⚠️ No tokens in URL, checking session...');
-          
+
+
           try {
             // Try to check auth status (maybe session-based)
             await checkAuthStatus();
-            console.log('✓ Session-based auth successful');
-            
+
+
             // Clean up URL
             window.history.replaceState({}, document.title, '/');
-            
+
             // Redirect to home
             navigate('/', { replace: true });
-            
+
           } catch (error) {
-            console.error('❌ No valid authentication found');
-            
+
+
             // Redirect to login
-            navigate('/login', { 
+            navigate('/login', {
               replace: true,
               state: { error: 'Authentication session expired. Please login again.' }
             });
           }
         }
-        
+
         setProcessing(false);
       }
     };
@@ -123,20 +121,20 @@ export const LoginSuccessHandler = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#000',
+          backgroundColor: '#FAF9F5',
           zIndex: 9999,
         }}
       >
-        <CircularProgress 
+        <CircularProgress
           size={60}
-          sx={{ 
-            color: '#60a5fa',
-            mb: 3 
-          }} 
+          sx={{
+            color: '#1C2B4A',
+            mb: 3
+          }}
         />
-        <Typography 
-          variant="h6" 
-          sx={{ 
+        <Typography
+          variant="h6"
+          sx={{
             color: 'white',
             mb: 1,
             fontWeight: 500
@@ -144,9 +142,9 @@ export const LoginSuccessHandler = () => {
         >
           Completing your login...
         </Typography>
-        <Typography 
-          variant="body2" 
-          sx={{ 
+        <Typography
+          variant="body2"
+          sx={{
             color: 'rgba(255, 255, 255, 0.6)'
           }}
         >

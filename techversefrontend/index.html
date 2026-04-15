@@ -1,13 +1,49 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="TechVerse - Premium Technology Services & Products. Expert Repairs, Refurbished Devices, and Smart Home Solutions." />
+  <title>TechVerse - Premium Tech Services</title>
+
+  <!-- DNS prefetch for API backend -->
+  <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+
+  <!-- Font Optimization: single combined request, display=swap to unblock render -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;900&family=Poppins:wght@700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sacramento&family=Syne:wght@800&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Preload the primary 3D model so it starts downloading before JS executes -->
+  <link rel="preload" href="/asus_tuf_dash_f15_laptop.techverse" as="fetch" crossorigin="anonymous" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: #0a0505; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+    /* Prevent layout shift while fonts load */
+    @font-face {
+      font-family: 'Inter';
+      font-display: swap;
+    }
+    /* Initial page skeleton — avoids flash of unstyled content */
+    #root { min-height: 100vh; }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

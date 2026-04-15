@@ -10,7 +10,7 @@ def custom_google_login(request):
     Custom Google OAuth login that forces account selection
     DO NOT add process=login - let allauth handle it naturally
     """
-    print(f"🔐 Redirecting to Google OAuth with prompt=select_account", flush=True)
+
     
     # Just redirect to allauth's Google login with prompt parameter
     # Remove process=login to let allauth recognize it as social login

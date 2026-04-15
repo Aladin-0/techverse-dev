@@ -20,7 +20,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useUserStore } from '../stores/userStore';
-import logoImage from './Tlogo.png';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor: 'transparent',
@@ -52,8 +51,8 @@ const LogoContainer = styled(Box)({
 });
 
 const LogoImg = styled('img')({
-  width: '40px',
-  height: '40px',
+  width: '46px',
+  height: '46px',
   objectFit: 'contain',
 });
 
@@ -83,7 +82,7 @@ const ProfileButton = styled(Button)(({ theme }) => ({
   backgroundColor: 'transparent',
   color: 'var(--text-color, #FAFAFA)',
   fontWeight: 600,
-  fontSize: '1rem',
+  fontSize: '1.05rem',
   textTransform: 'none',
   transition: 'all 0.3s ease',
   border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -229,11 +228,10 @@ export const TechnicianNavBar: React.FC<TechnicianNavBarProps> = ({ onRefresh })
   return (
     <>
       <StyledAppBar className={scrolled ? 'scrolled' : ''}>
-        <Toolbar sx={{ py: 1, px: { xs: 2, sm: 3 } }}>
+        <Toolbar sx={{ py: 1.5, px: { xs: 2, sm: 3 } }}>
           <NavContainer>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <LogoContainer>
-                <LogoImg src={logoImage} alt="TechVerse Logo" />
                 <Logo>TechVerse</Logo>
               </LogoContainer>
               {/* MODIFIED: Badge is now hidden on mobile */}

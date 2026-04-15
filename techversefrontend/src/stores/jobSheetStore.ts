@@ -62,7 +62,7 @@ export const useJobSheetStore = create<JobSheetStore>((set, get) => ({
   fetchJobSheets: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await apiClient.get('/services/api/job-sheets/');
+      const response = await apiClient.get('/api/job-sheets/');
       set({ jobSheets: response.data, loading: false });
     } catch (error: any) {
       set({ 
@@ -75,7 +75,7 @@ export const useJobSheetStore = create<JobSheetStore>((set, get) => ({
   createJobSheet: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await apiClient.post('/services/api/job-sheets/create/', data);
+      const response = await apiClient.post('/api/job-sheets/create/', data);
       
       // Refresh job sheets list
       await get().fetchJobSheets();
@@ -92,7 +92,7 @@ export const useJobSheetStore = create<JobSheetStore>((set, get) => ({
   approveJobSheet: async (jobSheetId) => {
     set({ loading: true, error: null });
     try {
-      await apiClient.post(`/services/api/job-sheets/${jobSheetId}/approve/`);
+      await apiClient.post(`/api/job-sheets/${jobSheetId}/approve/`);
       
       // Refresh job sheets list
       await get().fetchJobSheets();
@@ -108,7 +108,7 @@ export const useJobSheetStore = create<JobSheetStore>((set, get) => ({
   declineJobSheet: async (jobSheetId, reason) => {
     set({ loading: true, error: null });
     try {
-      await apiClient.post(`/services/api/job-sheets/${jobSheetId}/decline/`, { reason });
+      await apiClient.post(`/api/job-sheets/${jobSheetId}/decline/`, { reason });
       
       // Refresh job sheets list
       await get().fetchJobSheets();
@@ -124,7 +124,7 @@ export const useJobSheetStore = create<JobSheetStore>((set, get) => ({
   getJobSheetDetail: async (jobSheetId) => {
     set({ loading: true, error: null });
     try {
-      const response = await apiClient.get(`/services/api/job-sheets/${jobSheetId}/`);
+      const response = await apiClient.get(`/api/job-sheets/${jobSheetId}/`);
       set({ loading: false });
       return response.data;
     } catch (error: any) {

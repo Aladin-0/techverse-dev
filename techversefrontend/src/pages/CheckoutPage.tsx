@@ -1,849 +1,661 @@
-// src/pages/CheckoutPage.tsx - Part 1 of 2
+// src/pages/CheckoutPage.tsx - Modern full-width checkout
 import React, { useState, useEffect } from 'react';
 import { useCartStore } from '../stores/cartStore';
 import { useProductStore } from '../stores/productStore';
 import { useUserStore } from '../stores/userStore';
 import {
-  Box,
-  Typography,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-  Grid,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    CircularProgress
 } from '@mui/material';
-import PersonIcon from '@mui/icons-material/Person';
-import PhoneIcon from '@mui/icons-material/Phone';
-import HomeIcon from '@mui/icons-material/Home';
-import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import { styled } from '@mui/material/styles';
-import apiClient from '../api';
-
-// Styled components matching your design system
-const PageWrapper = styled(Box)(({ theme }) => ({
-  backgroundColor: '#000000',
-  color: 'white',
-  fontFamily: "'Inter', sans-serif",
-  minHeight: '100vh',
-  width: '100%',
-  paddingTop: '80px',
-  [theme.breakpoints.down('sm')]: {
-    paddingTop: '60px',
-  },
-}));
-
-const CheckoutHero = styled(Box)(({ theme }) => ({
-  background: `
-    radial-gradient(ellipse 1200px 800px at 50% 20%, rgba(64, 64, 64, 0.15) 0%, transparent 50%),
-    linear-gradient(135deg, #000000 0%, #111111 50%, #000000 100%)
-  `,
-  padding: '60px',
-  textAlign: 'center',
-  position: 'relative',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-  [theme.breakpoints.down('sm')]: {
-    padding: '40px 20px',
-  },
-}));
-
-const HeroTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '36px',
-  fontWeight: 700,
-  marginBottom: '16px',
-  color: '#ffffff',
-  background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  [theme.breakpoints.down('sm')]: {
-    fontSize: '28px',
-  },
-}));
-
-const CheckoutContent = styled(Box)(({ theme }) => ({
-  padding: '60px',
-  background: `linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #000000 100%)`,
-  position: 'relative',
-  [theme.breakpoints.down('sm')]: {
-    padding: '30px 20px',
-  },
-}));
-
-const ContentContainer = styled(Box)({
-  maxWidth: '1200px',
-  margin: '0 auto',
-  position: 'relative',
-  zIndex: 2,
-});
-
-const SectionCard = styled(Card)({
-  background: `linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`,
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  borderRadius: '20px',
-  marginBottom: '32px',
-  backdropFilter: 'blur(20px)',
-});
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '24px',
-  fontWeight: 600,
-  marginBottom: '24px',
-  color: 'rgba(255, 255, 255, 0.95)',
-  [theme.breakpoints.down('sm')]: {
-    fontSize: '20px',
-  },
-}));
-
-const PremiumButton = styled(Button)(({ theme }) => ({
-  backgroundColor: 'rgba(96, 165, 250, 0.15)',
-  border: '1px solid rgba(96, 165, 250, 0.3)',
-  color: '#60a5fa',
-  borderRadius: '16px',
-  padding: '16px',
-  fontSize: '16px',
-  fontWeight: 600,
-  textTransform: 'none',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    backgroundColor: 'rgba(96, 165, 250, 0.25)',
-    borderColor: 'rgba(96, 165, 250, 0.4)',
-    transform: 'translateY(-2px)',
-  },
-  '&:disabled': {
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
-    color: 'rgba(96, 165, 250, 0.5)',
-    cursor: 'not-allowed',
-  },
-  [theme.breakpoints.down('sm')]: {
-    width: '100%',
-  },
-}));
-
-const PremiumTextField = styled(TextField)({
-  '& .MuiOutlinedInput-root': {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
-    borderRadius: '12px',
-    color: 'white',
-    '& fieldset': { border: 'none' },
-    '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-      borderColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    '&.Mui-focused': {
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-      borderColor: 'rgba(255, 255, 255, 0.3)',
-    },
-  },
-  '& .MuiInputLabel-root': {
-    color: 'rgba(255, 255, 255, 0.6)',
-    '&.Mui-focused': { color: 'rgba(255, 255, 255, 0.9)' },
-  },
-  '& .MuiInputBase-input': { color: 'white' }
-});
-
-const AddressCard = styled(Box)<{ selected?: boolean }>(({ selected }) => ({
-  padding: '16px',
-  backgroundColor: selected ? 'rgba(96, 165, 250, 0.1)' : 'transparent',
-  border: `1px solid ${selected ? 'rgba(96, 165, 250, 0.3)' : 'rgba(255, 255, 255, 0.05)'}`,
-  borderRadius: '12px',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  marginBottom: '12px',
-  '&:hover': {
-    backgroundColor: selected ? 'rgba(96, 165, 250, 0.15)' : 'rgba(255, 255, 255, 0.02)',
-    borderColor: selected ? 'rgba(96, 165, 250, 0.4)' : 'rgba(255, 255, 255, 0.1)',
-  },
-}));
-
-const OrderItemCard = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '16px',
-  padding: '16px 0',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-  '&:last-child': {
-    borderBottom: 'none',
-  },
-});
+import apiClient, { getImageUrl } from '../api';
 
 const CheckoutPage: React.FC = () => {
-  const { items, getTotalPrice, clearCart } = useCartStore();
-  const { addresses, fetchAddresses } = useProductStore();
-  const { user, isAuthenticated, checkAuthStatus } = useUserStore();
+    const { items, getTotalPrice, clearCart } = useCartStore();
+    const { addresses, fetchAddresses } = useProductStore();
+    const { user, isAuthenticated, checkAuthStatus } = useUserStore();
 
-  const [selectedAddress, setSelectedAddress] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
-  const [profileIncomplete, setProfileIncomplete] = useState(false);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
-  const [orderIds, setOrderIds] = useState<number[]>([]);
-  const [authChecking, setAuthChecking] = useState(true);
+    const [selectedAddress, setSelectedAddress] = useState<string>('');
+    const [loading, setLoading] = useState(false);
+    const [orderSuccess, setOrderSuccess] = useState(false);
+    const [profileIncomplete, setProfileIncomplete] = useState(false);
+    const [missingFields, setMissingFields] = useState<string[]>([]);
+    const [orderIds, setOrderIds] = useState<number[]>([]);
+    const [authChecking, setAuthChecking] = useState(true);
 
-  // Profile completion dialog state
-  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [tempName, setTempName] = useState('');
-  const [tempPhone, setTempPhone] = useState('');
-  const [profileLoading, setProfileLoading] = useState(false);
+    // Profile completion dialog state
+    const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+    const [tempName, setTempName] = useState('');
+    const [tempPhone, setTempPhone] = useState('');
+    const [profileLoading, setProfileLoading] = useState(false);
 
-  // Enhanced authentication check
-  useEffect(() => {
-    const initializeCheckout = async () => {
-      try {
-        console.log('Checking authentication status...');
-        console.log('Current auth state:', { isAuthenticated, user: user?.email });
+    // Payment Selection state
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'cod'>('upi');
 
-        // If not authenticated according to store, try to check auth status
-        if (!isAuthenticated || !user) {
-          console.log('User not authenticated, checking auth status...');
-          await checkAuthStatus();
+    // Affiliate state
+    const [manualCode, setManualCode] = useState('');
+    const [isApplyingCode, setIsApplyingCode] = useState(false);
+    const [affiliateName, setAffiliateName] = useState(localStorage.getItem('techverse_affiliate_name') || '');
+    const [affiliateCode, setAffiliateCode] = useState(localStorage.getItem('techverse_affiliate_code') || '');
+    const [affiliateError, setAffiliateError] = useState<string | null>(null);
+
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        const initializeCheckout = async () => {
+            try {
+                if (!isAuthenticated || !user) {
+                    await checkAuthStatus();
+                }
+
+                setTimeout(() => {
+                    const currentAuthState = useUserStore.getState();
+
+                    if (!currentAuthState.isAuthenticated || !currentAuthState.user) {
+                        window.location.href = '/login';
+                        return;
+                    }
+
+                    if (items.length === 0) {
+                        window.location.href = '/store';
+                        return;
+                    }
+
+                    fetchAddresses();
+                    checkProfileCompletion();
+                    setAuthChecking(false);
+                }, 1000);
+
+            } catch (error) {
+                setAuthChecking(false);
+                window.location.href = '/login';
+            }
+        };
+
+        initializeCheckout();
+    }, []);
+
+    useEffect(() => {
+        const defaultAddress = addresses.find(addr => addr.is_default);
+        if (defaultAddress && !selectedAddress) {
+            setSelectedAddress(defaultAddress.id.toString());
         }
+    }, [addresses, selectedAddress]);
 
-        // Give a moment for auth to update
-        setTimeout(() => {
-          const currentAuthState = useUserStore.getState();
-          console.log('Auth state after check:', {
-            isAuthenticated: currentAuthState.isAuthenticated,
-            user: currentAuthState.user?.email
-          });
+    const checkProfileCompletion = async () => {
+        try {
+            const response = await apiClient.get('/api/users/profile/validate/');
+            const { is_complete, missing_fields } = response.data;
 
-          if (!currentAuthState.isAuthenticated || !currentAuthState.user) {
-            console.log('Redirecting to login - no valid auth found');
-            window.location.href = '/login';
-            return;
-          }
-
-          if (items.length === 0) {
-            console.log('Redirecting to store - no items in cart');
-            window.location.href = '/store';
-            return;
-          }
-
-          // User is authenticated and has items, proceed with checkout
-          console.log('User authenticated, proceeding with checkout');
-          fetchAddresses();
-          checkProfileCompletion();
-          setAuthChecking(false);
-        }, 1000);
-
-      } catch (error) {
-        console.error('Error during checkout initialization:', error);
-        setAuthChecking(false);
-        window.location.href = '/login';
-      }
+            if (!is_complete) {
+                setProfileIncomplete(true);
+                setMissingFields(missing_fields);
+                setTempName(user?.name || '');
+                setTempPhone(user?.phone || '');
+            } else {
+                setProfileIncomplete(false);
+                setMissingFields([]);
+            }
+        } catch (error) {
+            console.error('Error checking profile completion:', error);
+        }
     };
 
-    initializeCheckout();
-  }, []); // Remove dependencies to avoid infinite loop
+    const handleCompleteProfile = async () => {
+        if (!tempName.trim() || !tempPhone.trim()) {
+            alert('Please fill out all fields');
+            return;
+        }
+        const phoneRegex = /^[+]?[\d\s\-\(\)]{10,15}$/;
+        if (!phoneRegex.test(tempPhone.trim())) {
+            alert('Please enter a valid phone number');
+            return;
+        }
 
-  // Set default address
-  useEffect(() => {
-    const defaultAddress = addresses.find(addr => addr.is_default);
-    if (defaultAddress && !selectedAddress) {
-      setSelectedAddress(defaultAddress.id.toString());
-    }
-  }, [addresses, selectedAddress]);
+        setProfileLoading(true);
+        try {
+            const response = await apiClient.patch('/api/users/profile/', {
+                name: tempName.trim(),
+                phone: tempPhone.trim()
+            });
 
-  const checkProfileCompletion = async () => {
-    try {
-      const response = await apiClient.get('/api/users/profile/validate/');
-      const { is_complete, missing_fields } = response.data;
+            useUserStore.setState({ user: response.data });
 
-      if (!is_complete) {
-        setProfileIncomplete(true);
-        setMissingFields(missing_fields);
-        setTempName(user?.name || '');
-        setTempPhone(user?.phone || '');
-      } else {
-        setProfileIncomplete(false);
-        setMissingFields([]);
-      }
-    } catch (error) {
-      console.error('Error checking profile completion:', error);
-    }
-  };
+            setProfileDialogOpen(false);
+            setProfileIncomplete(false);
+            setMissingFields([]);
+            await checkProfileCompletion();
 
-  const handleCompleteProfile = async () => {
-    if (!tempName.trim()) {
-      alert('Please enter your name');
-      return;
-    }
+        } catch (error) {
+            alert('Failed to update profile. Please try again.');
+        } finally {
+            setProfileLoading(false);
+        }
+    };
 
-    if (!tempPhone.trim()) {
-      alert('Please enter your phone number');
-      return;
-    }
+    const handleApplyAffiliate = async () => {
+        if (!manualCode.trim()) return;
+        setIsApplyingCode(true);
+        setAffiliateError(null);
+        try {
+            const response = await apiClient.get(`/api/affiliates/verify/${manualCode.trim()}/`);
+            if (response.data.success) {
+                localStorage.setItem('techverse_affiliate_code', response.data.code);
+                localStorage.setItem('techverse_affiliate_name', response.data.affiliate_name);
+                setAffiliateCode(response.data.code);
+                setAffiliateName(response.data.affiliate_name);
+                setManualCode('');
+                setAffiliateError(null);
+            }
+        } catch (error: any) {
+            setAffiliateError(error.response?.data?.error || 'Invalid affiliate code');
+            localStorage.removeItem('techverse_affiliate_code');
+            localStorage.removeItem('techverse_affiliate_name');
+            setAffiliateCode('');
+            setAffiliateName('');
+        } finally {
+            setIsApplyingCode(false);
+        }
+    };
 
-    // Validate phone number format
-    const phoneRegex = /^[+]?[\d\s\-\(\)]{10,15}$/;
-    if (!phoneRegex.test(tempPhone.trim())) {
-      alert('Please enter a valid phone number');
-      return;
-    }
+    const handleRemoveAffiliate = () => {
+        localStorage.removeItem('techverse_affiliate_code');
+        localStorage.removeItem('techverse_affiliate_name');
+        setAffiliateCode('');
+        setAffiliateName('');
+    };
 
-    setProfileLoading(true);
-    try {
-      const response = await apiClient.patch('/api/users/profile/', {
-        name: tempName.trim(),
-        phone: tempPhone.trim()
-      });
+    const handlePlaceOrder = async () => {
+        if (paymentMethod === 'cod') {
+            alert("Cash on Delivery is currently unavailable.");
+            return;
+        }
 
-      // Update the user store with new data
-      useUserStore.setState({ user: response.data });
+        if (profileIncomplete) {
+            if (missingFields.includes('name') || missingFields.includes('phone')) {
+                setProfileDialogOpen(true);
+                return;
+            }
+            if (missingFields.includes('address')) {
+                alert('Please add a delivery address from your profile before placing an order.');
+                window.location.href = '/profile';
+                return;
+            }
+        }
 
-      setProfileDialogOpen(false);
-      setProfileIncomplete(false);
-      setMissingFields([]);
-      await checkProfileCompletion(); // Revalidate
+        if (!selectedAddress) {
+            alert('Please select a delivery address');
+            return;
+        }
 
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+        setLoading(true);
+        try {
+            const affiliateCode = localStorage.getItem('techverse_affiliate_code');
 
-  const handlePlaceOrder = async () => {
-    // Check profile completion first
-    if (profileIncomplete) {
-      if (missingFields.includes('name') || missingFields.includes('phone')) {
-        setProfileDialogOpen(true);
-        return;
-      }
+            const payload = {
+                address_id: selectedAddress,
+                items: items.map((item) => ({
+                    product_slug: item.product.slug,
+                    quantity: item.quantity,
+                })),
+                affiliate_code: affiliateCode
+            };
 
-      if (missingFields.includes('address')) {
-        alert('Please add a delivery address from your profile before placing an order.');
-        window.location.href = '/profile';
-        return;
-      }
-    }
+            const response = await apiClient.post('/api/orders/create-bulk/', payload);
+            const orderId = response.data.id;
 
-    if (!selectedAddress) {
-      alert('Please select a delivery address');
-      return;
-    }
+            // Clear the cart locally once order is created in backend
+            clearCart();
 
-    setLoading(true);
-    try {
-      // Create a single order for all cart items
-      const payload = {
-        address_id: selectedAddress,
-        items: items.map((item) => ({
-          product_slug: item.product.slug,
-          quantity: item.quantity,
-        })),
-      };
+            const paymentResponse = await apiClient.post('/api/payments/initiate/', {
+                order_id: orderId
+            });
 
-      const response = await apiClient.post('/api/orders/create-bulk/', payload);
+            if (paymentResponse.data.redirect_url) {
+                window.location.href = paymentResponse.data.redirect_url;
+            } else {
+                throw new Error('Invalid payment response');
+            }
 
-      // The API returns the created order object
-      setOrderIds([response.data.id]);
-      clearCart();
-      setOrderSuccess(true);
+        } catch (error) {
+            alert('Failed to place order. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    } catch (error) {
-      console.error('Order creation failed:', error);
-      alert('Failed to place order. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const totalPrice = getTotalPrice();
 
-  const totalPrice = getTotalPrice();
-
-  // Show loading while checking authentication
-  if (authChecking) {
-    return (
-      <PageWrapper>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 'calc(100vh - 80px)',
-          flexDirection: 'column',
-          gap: 2
-        }}>
-          <CircularProgress sx={{ color: '#60a5fa' }} />
-          <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-            Verifying authentication...
-          </Typography>
-        </Box>
-      </PageWrapper>
-    );
-  }
-  // Success page
-  if (orderSuccess) {
-    return (
-      <PageWrapper>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 'calc(100vh - 80px)',
-          textAlign: 'center',
-          padding: '40px',
-        }}>
-          <Box sx={{ maxWidth: '600px' }}>
-            <CheckCircleIcon sx={{
-              fontSize: '80px',
-              color: '#22c55e',
-              marginBottom: '24px'
-            }} />
-
-            <Typography sx={{
-              fontSize: '36px',
-              fontWeight: 700,
-              marginBottom: '16px',
-              color: '#22c55e'
-            }}>
-              Order Placed Successfully!
-            </Typography>
-
-            <Typography sx={{
-              fontSize: '18px',
-              color: 'rgba(255, 255, 255, 0.6)',
-              marginBottom: '32px',
-              lineHeight: 1.6
-            }}>
-              Thank you for your purchase! Your order{orderIds.length > 1 ? 's' : ''}
-              {orderIds.length > 0 && ` (#${orderIds.join(', #')})`}
-              {orderIds.length > 1 ? ' have' : ' has'} been confirmed.
-              You'll receive updates via email and SMS.
-            </Typography>
-
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <PremiumButton onClick={() => window.location.href = '/my-orders'}>
-                <ShoppingCartIcon sx={{ mr: 1 }} />
-                View Orders
-              </PremiumButton>
-
-              <Button
-                onClick={() => window.location.href = '/store'}
-                sx={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: 'white',
-                  borderRadius: '16px',
-                  padding: '16px 24px',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  }
-                }}
-              >
-                Continue Shopping
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </PageWrapper>
-    );
-  }
-
-  return (
-    <PageWrapper>
-      {/* Header */}
-      <CheckoutHero>
-        <HeroTitle>Checkout</HeroTitle>
-        <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '16px' }}>
-          Review your order and complete your purchase
-        </Typography>
-      </CheckoutHero>
-
-      {/* Profile Incomplete Warning */}
-      {profileIncomplete && (
-        <Box sx={{ padding: { xs: '20px', sm: '20px 60px' } }}>
-          <Alert
-            severity="warning"
-            sx={{
-              backgroundColor: 'rgba(251, 191, 36, 0.15)',
-              color: '#fbbf24',
-              border: '1px solid rgba(251, 191, 36, 0.3)',
-              borderRadius: '12px',
-              '& .MuiAlert-icon': { color: '#fbbf24' }
-            }}
-            icon={<WarningIcon />}
-          >
-            <Typography variant="h6" sx={{ mb: 1 }}>Profile Incomplete</Typography>
-            <Typography sx={{ mb: 2 }}>
-              Please complete your profile before placing an order. Missing: {missingFields.join(', ')}
-            </Typography>
-
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {!missingFields.includes('address') && (
-                <Button
-                  onClick={() => setProfileDialogOpen(true)}
-                  size="small"
-                  sx={{
-                    color: '#fbbf24',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    if (authChecking) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-[#FAF9F5] text-[#1A1814] p-10">
+                <style>{`
+                    .material-symbols-outlined {
+                        font-family: 'Material Symbols Outlined';
+                        font-style: normal;
+                        font-size: 24px;
+                        display: inline-block;
+                        line-height: 1;
+                        text-transform: none;
+                        white-space: nowrap;
+                        font-weight: normal;
                     }
-                  }}
-                >
-                  Complete Now
-                </Button>
-              )}
+                `}</style>
+                <CircularProgress sx={{ color: '#1C2B4A' }} />
+                <p className="mt-4 text-[#8A8279] font-medium text-sm">Loading checkout...</p>
+            </div>
+        );
+    }
 
-              {missingFields.includes('address') && (
-                <Button
-                  onClick={() => window.location.href = '/profile'}
-                  size="small"
-                  sx={{
-                    color: '#fbbf24',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                    }
-                  }}
-                >
-                  Add Address
-                </Button>
-              )}
-            </Box>
-          </Alert>
-        </Box>
-      )}
+    return (
+        <div 
+            className="font-['Inter',sans-serif] text-[#1A1814] min-h-screen pb-20 pt-[80px] md:pt-[100px] relative overflow-hidden"
+            style={{ backgroundColor: '#FAF9F5' }}
+        >
+            <style>{`
+                .material-symbols-outlined {
+                    font-family: 'Material Symbols Outlined';
+                    font-style: normal;
+                    font-size: 24px;
+                    display: inline-block;
+                    line-height: 1;
+                    text-transform: none;
+                    white-space: nowrap;
+                    font-weight: normal;
+                }
+            `}</style>
 
-      {/* Main Content */}
-      <CheckoutContent>
-        <ContentContainer>
-          <Grid container spacing={4}>
+            {/* Subtle Background Blobs — matching site palette */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(212,146,42,0.07) 0%, transparent 70%)' }} />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(28,43,74,0.06) 0%, transparent 70%)' }} />
 
-            {/* Left Column - Order Items & Address */}
-            <Grid size={{ xs: 12, lg: 8 }}>
+            <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 relative z-10">
+                <div className="w-full">
 
-              {/* Order Summary */}
-              <SectionCard>
-                <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
-                  <SectionTitle>Order Summary</SectionTitle>
+                    {/* Header */}
+                    <div className="mb-8 md:mb-10">
+                        <p className="text-xs font-semibold text-[#D4922A] tracking-[0.2em] uppercase mb-2">Techverse Store</p>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-[#1A1814]">Checkout</h1>
+                        <p className="mt-1.5 text-[#6B6156] text-sm">Review your order and complete your purchase securely.</p>
+                    </div>
 
-                  {items.map((item) => (
-                    <OrderItemCard key={item.product.id}>
-                      <Box sx={{
-                        width: '60px',
-                        height: '60px',
-                        background: 'linear-gradient(135deg, #2a2a2a, #1a1a1a)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                      }}>
-                        {item.product.image ? (
-                          <img
-                            src={item.product.image.startsWith('http') ? item.product.image : `http://127.0.0.1:8000${item.product.image}`}
-                            alt={item.product.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '18px' }}>
-                            {item.product.name.charAt(0)}
-                          </Typography>
-                        )}
-                      </Box>
-
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 500, mb: 0.5, fontSize: { xs: '14px', sm: '16px' } }}>
-                          {item.product.name}
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '14px' }}>
-                          {item.product.category.name} • Quantity: {item.quantity}
-                        </Typography>
-                      </Box>
-
-                      <Typography sx={{ color: '#60a5fa', fontWeight: 600, fontSize: { xs: '16px', sm: '18px' } }}>
-                        ₹{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
-                      </Typography>
-                    </OrderItemCard>
-                  ))}
-                </CardContent>
-              </SectionCard>
-
-              {/* Delivery Address */}
-              <SectionCard>
-                <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                    <SectionTitle sx={{ mb: 0 }}>
-                      <HomeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                      Delivery Address
-                    </SectionTitle>
-
-                    {addresses.length > 0 && (
-                      <Button
-                        onClick={() => window.location.href = '/profile'}
-                        size="small"
-                        sx={{
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          textTransform: 'none',
-                          '&:hover': { color: '#60a5fa' }
-                        }}
-                      >
-                        Manage Addresses
-                      </Button>
-                    )}
-                  </Box>
-
-                  {addresses.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <HomeIcon sx={{ fontSize: '48px', color: 'rgba(255, 255, 255, 0.3)', mb: 2 }} />
-                      <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 2 }}>
-                        No addresses found
-                      </Typography>
-                      <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '14px', mb: 3 }}>
-                        Please add an address to continue
-                      </Typography>
-                      <PremiumButton onClick={() => window.location.href = '/profile'}>
-                        Add Address
-                      </PremiumButton>
-                    </Box>
-                  ) : (
-                    addresses.map((address) => (
-                      <AddressCard
-                        key={address.id}
-                        selected={selectedAddress === address.id.toString()}
-                        onClick={() => setSelectedAddress(address.id.toString())}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                          <input
-                            type="radio"
-                            name="address"
-                            value={address.id}
-                            checked={selectedAddress === address.id.toString()}
-                            onChange={(e) => setSelectedAddress(e.target.value)}
-                            style={{ marginTop: '4px' }}
-                          />
-
-                          <Box sx={{ flex: 1 }}>
-                            {address.is_default && (
-                              <Chip
-                                label="Default"
-                                size="small"
-                                sx={{
-                                  mb: 1,
-                                  backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                                  color: '#22c55e',
-                                  border: '1px solid rgba(34, 197, 94, 0.3)'
-                                }}
-                              />
+                    {/* Profile Incomplete Banner */}
+                    {profileIncomplete && (
+                        <div className="mb-6 border border-[#D4922A]/30 bg-amber-50 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 flex-shrink-0 rounded-full bg-[#D4922A]/15 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-[#D4922A] text-lg">warning</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-900">Profile Incomplete</p>
+                                    <p className="text-xs text-amber-700 mt-0.5">Missing: <span className="font-bold">{missingFields.join(', ')}</span></p>
+                                </div>
+                            </div>
+                            {missingFields.includes('name') || missingFields.includes('phone') ? (
+                                <button onClick={() => setProfileDialogOpen(true)} className="flex-shrink-0 px-5 py-2 bg-[#D4922A] hover:bg-[#b87b24] text-white text-xs font-semibold rounded-full transition-colors">
+                                    Complete Profile
+                                </button>
+                            ) : (
+                                <button onClick={() => window.location.href = '/profile'} className="flex-shrink-0 px-5 py-2 bg-[#1C2B4A] hover:bg-[#243660] text-white text-xs font-semibold rounded-full transition-colors">
+                                    Add Address
+                                </button>
                             )}
-
-                            <Typography sx={{ color: 'white', fontWeight: 500, mb: 0.5 }}>
-                              {address.street_address}
-                            </Typography>
-
-                            <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>
-                              {address.city}, {address.state} - {address.pincode}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </AddressCard>
-                    ))
-                  )}
-                </CardContent>
-              </SectionCard>
-            </Grid>
-
-            {/* Right Column - Order Total */}
-            <Grid size={{ xs: 12, lg: 4 }}>
-              <SectionCard sx={{ position: 'sticky', top: '100px' }}>
-                <CardContent sx={{ p: 4 }}>
-                  <SectionTitle sx={{ mb: 3 }}>Order Total</SectionTitle>
-
-                  <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                        Subtotal ({items.length} item{items.length !== 1 ? 's' : ''}):
-                      </Typography>
-                      <Typography sx={{ color: 'white' }}>
-                        ₹{totalPrice.toFixed(2)}
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                        Delivery:
-                      </Typography>
-                      <Typography sx={{ color: '#22c55e' }}>
-                        Free
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                        Tax:
-                      </Typography>
-                      <Typography sx={{ color: 'white' }}>
-                        Included
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  <Box sx={{
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                    pt: 2,
-                    mb: 3
-                  }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography sx={{ fontSize: '20px', fontWeight: 600, color: 'white' }}>
-                        Total:
-                      </Typography>
-                      <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#60a5fa' }}>
-                        ₹{totalPrice.toFixed(2)}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  <PremiumButton
-                    fullWidth
-                    onClick={handlePlaceOrder}
-                    disabled={loading || addresses.length === 0 || !selectedAddress || profileIncomplete}
-                    sx={{ mb: 2 }}
-                  >
-                    {loading ? (
-                      <>
-                        <CircularProgress size={20} sx={{ mr: 1, color: 'currentColor' }} />
-                        Placing Order...
-                      </>
-                    ) : (
-                      <>
-                        <LocalShippingIcon sx={{ mr: 1 }} />
-                        Place Order
-                      </>
+                        </div>
                     )}
-                  </PremiumButton>
 
-                  {profileIncomplete && (
-                    <Typography sx={{
-                      fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      textAlign: 'center'
-                    }}>
-                      Complete your profile to place order
-                    </Typography>
-                  )}
+                    {/* Two-column grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-                  {addresses.length === 0 && (
-                    <Typography sx={{
-                      fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      textAlign: 'center'
-                    }}>
-                      Add a delivery address to continue
-                    </Typography>
-                  )}
-                </CardContent>
-              </SectionCard>
-            </Grid>
-          </Grid>
-        </ContentContainer>
-      </CheckoutContent>
+                        {/* Left Column */}
+                        <div className="lg:col-span-8 space-y-5">
 
-      {/* Profile Completion Dialog */}
-      <Dialog
-        open={profileDialogOpen}
-        onClose={() => !profileLoading && setProfileDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            background: 'linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderRadius: '20px',
-            color: 'white',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2
-        }}>
-          <WarningIcon sx={{ color: '#fbbf24' }} />
-          Complete Your Profile
-        </DialogTitle>
+                            {/* Order Items */}
+                            <section className="bg-white border border-[rgba(28,43,74,0.08)] p-6 md:p-7 rounded-2xl shadow-sm">
+                                <div className="flex items-center gap-2.5 mb-5">
+                                    <span className="material-symbols-outlined text-[#1C2B4A] text-xl">shopping_bag</span>
+                                    <h2 className="text-base font-semibold text-[#1A1814]">Order Items</h2>
+                                    <span className="ml-auto text-xs font-medium text-[#6B6156] bg-[rgba(28,43,74,0.05)] px-2.5 py-0.5 rounded-full">{items.length} item{items.length > 1 ? 's' : ''}</span>
+                                </div>
+                                <div className="space-y-3">
+                                    {items.map((item) => (
+                                        <div key={item.product.id} className="flex items-center gap-4 p-4 rounded-xl bg-[#FAF9F5] border border-[rgba(28,43,74,0.06)] hover:border-[rgba(28,43,74,0.14)] transition-colors">
+                                            <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-[rgba(28,43,74,0.07)]">
+                                                {item.product.image ? (
+                                                    <img alt={item.product.name} className="w-14 h-14 md:w-16 md:h-16 object-contain" src={getImageUrl(item.product.image)} />
+                                                ) : (
+                                                    <span className="text-2xl font-bold text-[#D4922A]">{item.product.name.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-grow min-w-0">
+                                                <h3 className="font-semibold text-sm md:text-base text-[#1A1814] line-clamp-2 leading-snug">{item.product.name}</h3>
+                                                <p className="text-xs text-[#6B6156] mt-1">{item.product.category.name} · Qty: {item.quantity}</p>
+                                            </div>
+                                            <div className="text-right flex-shrink-0">
+                                                <p className="text-base md:text-lg font-bold text-[#1A1814]">₹{(parseFloat(item.product.price) * item.quantity).toFixed(2)}</p>
+                                                <p className="text-[11px] text-[#6B6156] mt-0.5">₹{parseFloat(item.product.price).toFixed(2)} each</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
 
-        <DialogContent sx={{ pt: 3 }}>
-          <Typography sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.8)' }}>
-            We need your name and phone number to process your order and provide delivery updates.
-          </Typography>
+                            {/* Delivery Address */}
+                            <section className="bg-white border border-[rgba(28,43,74,0.08)] p-6 md:p-7 rounded-2xl shadow-sm">
+                                <div className="flex items-center gap-2.5 mb-5">
+                                    <span className="material-symbols-outlined text-[#1C2B4A] text-xl">location_on</span>
+                                    <h2 className="text-base font-semibold text-[#1A1814]">Delivery Address</h2>
+                                </div>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <PremiumTextField
-              label="Full Name"
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              fullWidth
-              required
-              disabled={profileLoading}
-              InputProps={{
-                startAdornment: <PersonIcon sx={{ color: 'rgba(255, 255, 255, 0.6)', mr: 1 }} />
-              }}
-            />
+                                {addresses.length === 0 ? (
+                                    <div className="p-8 text-center border border-dashed border-[rgba(28,43,74,0.15)] rounded-xl bg-[rgba(28,43,74,0.02)]">
+                                        <span className="material-symbols-outlined text-4xl text-[#D4922A] block mb-2">add_location_alt</span>
+                                        <p className="text-[#6B6156] text-sm font-medium mb-4">No saved addresses found</p>
+                                        <button onClick={() => window.location.href = '/profile'} className="px-6 py-2.5 border border-[#1C2B4A] text-[#1C2B4A] text-xs font-semibold hover:bg-[#1C2B4A] hover:text-white transition-colors rounded-full">
+                                            Add Address
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {addresses.map((address) => (
+                                            <div
+                                                key={address.id}
+                                                onClick={() => setSelectedAddress(address.id.toString())}
+                                                className={`cursor-pointer border p-4 rounded-xl transition-all duration-200 ${
+                                                    selectedAddress === address.id.toString()
+                                                        ? 'border-[#1C2B4A] bg-[rgba(28,43,74,0.04)] shadow-sm'
+                                                        : 'border-[rgba(28,43,74,0.08)] bg-[#FAF9F5] hover:border-[rgba(28,43,74,0.2)]'
+                                                }`}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className="mt-0.5 flex-shrink-0">
+                                                        <span className={`material-symbols-outlined text-lg ${selectedAddress === address.id.toString() ? 'text-[#1C2B4A]' : 'text-[#6B6156]'}`}>
+                                                            {selectedAddress === address.id.toString() ? 'radio_button_checked' : 'radio_button_unchecked'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className={`font-semibold text-sm truncate ${selectedAddress === address.id.toString() ? 'text-[#1C2B4A]' : 'text-[#1A1814]'}`}>{address.street_address}</p>
+                                                        <p className="text-xs text-[#6B6156] leading-relaxed mt-0.5">{address.city}, {address.state} — {address.pincode}</p>
+                                                        {address.is_default && (
+                                                            <span className="inline-block mt-2 px-2 py-0.5 bg-[rgba(28,43,74,0.08)] text-[#1C2B4A] text-[10px] font-semibold rounded-full">Default</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {addresses.length > 0 && (
+                                    <button onClick={() => window.location.href = '/profile'} className="mt-4 text-xs font-medium text-[#6B6156] hover:text-[#1C2B4A] transition-colors w-full text-center pt-2">
+                                        + Manage Addresses
+                                    </button>
+                                )}
+                            </section>
 
-            <PremiumTextField
-              label="Phone Number"
-              value={tempPhone}
-              onChange={(e) => setTempPhone(e.target.value)}
-              fullWidth
-              required
-              disabled={profileLoading}
-              placeholder="+91 9876543210"
-              InputProps={{
-                startAdornment: <PhoneIcon sx={{ color: 'rgba(255, 255, 255, 0.6)', mr: 1 }} />
-              }}
-            />
-          </Box>
-        </DialogContent>
+                            {/* Shipping */}
+                            <section className="bg-white border border-[rgba(28,43,74,0.08)] p-6 md:p-7 rounded-2xl shadow-sm">
+                                <div className="flex items-center gap-2.5 mb-5">
+                                    <span className="material-symbols-outlined text-[#1C2B4A] text-xl">local_shipping</span>
+                                    <h2 className="text-base font-semibold text-[#1A1814]">Shipping</h2>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="p-4 rounded-xl bg-[#FAF9F5] border border-[rgba(28,43,74,0.06)] flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-[#6B6156] mb-0.5">Method</p>
+                                            <p className="text-sm font-semibold text-[#1A1814]">Standard Delivery</p>
+                                        </div>
+                                        <span className="text-sm font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">FREE</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-[#FAF9F5] border border-[rgba(28,43,74,0.06)]">
+                                        <p className="text-xs text-[#6B6156] mb-0.5">Estimated Delivery</p>
+                                        <p className="text-sm font-semibold text-[#1A1814]">3–5 Business Days</p>
+                                    </div>
+                                </div>
+                            </section>
 
-        <DialogActions sx={{ p: 3, gap: 2 }}>
-          <Button
-            onClick={() => setProfileDialogOpen(false)}
-            disabled={profileLoading}
-            sx={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
-            }}
-          >
-            Cancel
-          </Button>
+                            {/* Payment Method */}
+                            <section className="bg-white border border-[rgba(28,43,74,0.08)] p-6 md:p-7 rounded-2xl shadow-sm">
+                                <div className="flex items-center gap-2.5 mb-5">
+                                    <span className="material-symbols-outlined text-[#1C2B4A] text-xl">account_balance_wallet</span>
+                                    <h2 className="text-base font-semibold text-[#1A1814]">Payment Method</h2>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <button
+                                        onClick={() => setPaymentMethod('card')}
+                                        className={`p-5 rounded-xl border flex flex-col items-center gap-3 transition-all ${
+                                            paymentMethod === 'card'
+                                                ? 'border-[#1C2B4A] bg-[rgba(28,43,74,0.04)] shadow-sm'
+                                                : 'border-[rgba(28,43,74,0.08)] bg-[#FAF9F5] hover:border-[rgba(28,43,74,0.2)]'
+                                        }`}
+                                    >
+                                        <span className={`material-symbols-outlined text-2xl ${paymentMethod === 'card' ? 'text-[#1C2B4A]' : 'text-[#6B6156]'}`}>credit_card</span>
+                                        <span className={`text-xs font-semibold ${paymentMethod === 'card' ? 'text-[#1C2B4A]' : 'text-[#6B6156]'}`}>Card</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setPaymentMethod('upi')}
+                                        className={`p-5 rounded-xl border flex flex-col items-center gap-3 transition-all ${
+                                            paymentMethod === 'upi'
+                                                ? 'border-[#1C2B4A] bg-[rgba(28,43,74,0.04)] shadow-sm'
+                                                : 'border-[rgba(28,43,74,0.08)] bg-[#FAF9F5] hover:border-[rgba(28,43,74,0.2)]'
+                                        }`}
+                                    >
+                                        <span className={`material-symbols-outlined text-2xl ${paymentMethod === 'upi' ? 'text-[#1C2B4A]' : 'text-[#6B6156]'}`}>qr_code_scanner</span>
+                                        <span className={`text-xs font-semibold ${paymentMethod === 'upi' ? 'text-[#1C2B4A]' : 'text-[#6B6156]'}`}>UPI</span>
+                                    </button>
+                                    <div className="p-5 rounded-xl border border-[rgba(28,43,74,0.05)] bg-[rgba(28,43,74,0.02)] flex flex-col items-center gap-3 cursor-not-allowed relative overflow-hidden group opacity-50">
+                                        <span className="material-symbols-outlined text-2xl text-[#6B6156]">payments</span>
+                                        <span className="text-xs font-semibold text-[#6B6156] line-through">Cash on Delivery</span>
+                                        <div className="absolute inset-0 bg-white/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-xl">
+                                            <span className="text-[10px] font-semibold text-[#6B6156] text-center px-3">Currently Unavailable</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
 
-          <PremiumButton
-            onClick={handleCompleteProfile}
-            disabled={profileLoading || !tempName.trim() || !tempPhone.trim()}
-          >
-            {profileLoading ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1, color: 'currentColor' }} />
-                Saving...
-              </>
-            ) : (
-              'Save & Continue'
-            )}
-          </PremiumButton>
-        </DialogActions>
-      </Dialog>
-    </PageWrapper>
-  );
+                        {/* Right Sidebar */}
+                        <aside className="lg:col-span-4 lg:sticky lg:top-28">
+                            <div className="bg-white border border-[rgba(28,43,74,0.1)] p-6 md:p-7 rounded-2xl shadow-sm">
+                                <h2 className="text-base font-semibold text-[#1A1814] mb-5 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[#1C2B4A] text-xl">receipt_long</span>
+                                    Order Summary
+                                </h2>
+
+                                <div className="space-y-3 mb-5">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-[#6B6156]">Subtotal ({items.length} item{items.length > 1 ? 's' : ''})</span>
+                                        <span className="text-[#1A1814] font-semibold">₹{totalPrice.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-[#6B6156]">Shipping</span>
+                                        <span className="text-green-700 font-semibold">FREE</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-[#6B6156]">Taxes</span>
+                                        <span className="text-[#1A1814] font-medium">Included</span>
+                                    </div>
+                                </div>
+
+                                {/* Affiliate */}
+                                {affiliateCode ? (
+                                    <div className="mb-5 flex items-center justify-between bg-[rgba(212,146,42,0.07)] border border-[rgba(212,146,42,0.25)] p-3.5 rounded-xl group">
+                                        <div>
+                                            <p className="text-[10px] font-semibold text-[#6B6156] uppercase tracking-wider mb-1">Via Referral</p>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-[14px] text-[#D4922A]">verified</span>
+                                                <span className="text-sm font-bold text-[#1C2B4A]">{affiliateName || affiliateCode}</span>
+                                            </div>
+                                        </div>
+                                        <button onClick={handleRemoveAffiliate} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-50 rounded-full" title="Remove">
+                                            <span className="material-symbols-outlined text-red-400 text-[16px]">close</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="mb-5 pt-4 border-t border-[rgba(28,43,74,0.06)]">
+                                        <label className="text-[10px] font-bold text-[#6B6156] uppercase tracking-wider block mb-2">Referral Code</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={manualCode}
+                                                onChange={(e) => { setManualCode(e.target.value); if (affiliateError) setAffiliateError(null); }}
+                                                placeholder="Enter code"
+                                                className={`flex-1 bg-[#FAF9F5] border ${affiliateError ? 'border-red-300 text-red-600' : 'border-[rgba(28,43,74,0.12)] text-[#1C2B4A]'} rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-[#1C2B4A] transition-all placeholder:text-[#6B6156]/50 uppercase tracking-widest`}
+                                            />
+                                            <button
+                                                onClick={handleApplyAffiliate}
+                                                disabled={isApplyingCode || !manualCode.trim()}
+                                                className="bg-[#1C2B4A] hover:bg-[#243660] disabled:bg-[rgba(28,43,74,0.1)] disabled:text-[#6B6156] text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center min-w-[72px]"
+                                            >
+                                                {isApplyingCode ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Apply'}
+                                            </button>
+                                        </div>
+                                        {affiliateError && (
+                                            <p className="text-[11px] text-red-500 mt-1.5 flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[13px]">error</span>
+                                                {affiliateError}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Total */}
+                                <div className="pt-4 border-t border-[rgba(28,43,74,0.08)] mb-5">
+                                    <div className="flex items-end justify-between">
+                                        <div>
+                                            <p className="text-xs text-[#6B6156] mb-1">Total</p>
+                                            <p className="text-3xl font-bold text-[#1A1814] tracking-tight">₹{totalPrice.toFixed(2)}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2.5 py-1.5 rounded-full">
+                                            <span className="material-symbols-outlined text-[13px]">verified_user</span>
+                                            <span className="text-[10px] font-semibold">Secure</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handlePlaceOrder}
+                                    disabled={loading || profileIncomplete || !selectedAddress}
+                                    className={`w-full py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+                                        loading || profileIncomplete || !selectedAddress
+                                            ? 'bg-[rgba(28,43,74,0.07)] text-[#6B6156] cursor-not-allowed'
+                                            : 'bg-[#1C2B4A] hover:bg-[#243660] text-white shadow-[0_4px_14px_rgba(28,43,74,0.2)] hover:shadow-[0_6px_20px_rgba(28,43,74,0.3)]'
+                                    }`}
+                                >
+                                    {loading
+                                        ? <><CircularProgress size={18} sx={{ color: 'currentColor' }} /> Processing...</>
+                                        : <><span className="material-symbols-outlined text-lg">lock</span> Place Order</>
+                                    }
+                                </button>
+
+                                <p className="text-center text-[11px] text-[#6B6156] mt-4">
+                                    By proceeding, you agree to our{' '}
+                                    <a className="text-[#1C2B4A] hover:underline" href="/terms">Terms & Conditions</a>
+                                </p>
+                            </div>
+
+                            {/* Trust Badges */}
+                            <div className="mt-5 grid grid-cols-3 gap-3">
+                                <div className="flex flex-col items-center gap-1.5 text-[11px] font-medium text-[#6B6156] text-center">
+                                    <div className="w-9 h-9 rounded-full bg-white border border-[rgba(28,43,74,0.08)] flex items-center justify-center shadow-sm">
+                                        <span className="material-symbols-outlined text-[#1C2B4A] text-lg">shield</span>
+                                    </div>
+                                    Secure Payment
+                                </div>
+                                <div className="flex flex-col items-center gap-1.5 text-[11px] font-medium text-[#6B6156] text-center">
+                                    <div className="w-9 h-9 rounded-full bg-white border border-[rgba(28,43,74,0.08)] flex items-center justify-center shadow-sm">
+                                        <span className="material-symbols-outlined text-[#D4922A] text-lg">history</span>
+                                    </div>
+                                    Easy Returns
+                                </div>
+                                <div className="flex flex-col items-center gap-1.5 text-[11px] font-medium text-[#6B6156] text-center">
+                                    <div className="w-9 h-9 rounded-full bg-white border border-[rgba(28,43,74,0.08)] flex items-center justify-center shadow-sm">
+                                        <span className="material-symbols-outlined text-[#1C2B4A] text-lg">support_agent</span>
+                                    </div>
+                                    24/7 Support
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            </div>
+
+            {/* Profile Completion Dialog */}
+            <Dialog
+                open={profileDialogOpen}
+                onClose={() => !profileLoading && setProfileDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        background: '#FFFFFF',
+                        border: '1px solid rgba(28,43,74,0.1)',
+                        borderRadius: '20px',
+                        color: '#1A1814',
+                        boxShadow: '0 20px 60px rgba(28,43,74,0.12)'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid rgba(28,43,74,0.08)', display: 'flex', alignItems: 'center', gap: 2, p: 3 }}>
+                    <div className="h-10 w-10 rounded-full bg-[rgba(28,43,74,0.06)] flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined text-[#1C2B4A] text-xl">badge</span>
+                    </div>
+                    <div>
+                        <span className="block font-semibold text-base text-[#1A1814]">Complete Your Profile</span>
+                        <span className="block text-xs text-[#6B6156] mt-0.5">Please fill in your name and phone number to continue.</span>
+                    </div>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3, mt: 1 }}>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-medium text-[#6B6156] block mb-1.5">Full Name</label>
+                            <div className="relative">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6B6156] text-lg">person</span>
+                                <input
+                                    className="w-full bg-[#FAF9F5] border border-[rgba(28,43,74,0.12)] focus:border-[#1C2B4A] rounded-xl py-3 pl-10 pr-4 text-[#1A1814] text-sm outline-none transition-all"
+                                    placeholder="Your full name" type="text"
+                                    value={tempName} onChange={e => setTempName(e.target.value)} disabled={profileLoading}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-xs font-medium text-[#6B6156] block mb-1.5">Phone Number</label>
+                            <div className="relative">
+                                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6B6156] text-lg">call</span>
+                                <input
+                                    className="w-full bg-[#FAF9F5] border border-[rgba(28,43,74,0.12)] focus:border-[#1C2B4A] rounded-xl py-3 pl-10 pr-4 text-[#1A1814] text-sm outline-none transition-all"
+                                    placeholder="+91 XXXXX XXXXX" type="text"
+                                    value={tempPhone} onChange={e => setTempPhone(e.target.value)} disabled={profileLoading}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 3, pt: 0, gap: 2 }}>
+                    <button onClick={() => setProfileDialogOpen(false)} disabled={profileLoading} className="px-5 py-2.5 text-xs font-medium text-[#6B6156] hover:text-[#1A1814] transition-colors rounded-full">
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleCompleteProfile} disabled={profileLoading || !tempName.trim() || !tempPhone.trim()}
+                        className="px-7 py-2.5 bg-[#1C2B4A] hover:bg-[#243660] disabled:bg-[rgba(28,43,74,0.08)] disabled:text-[#6B6156] text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-2"
+                    >
+                        {profileLoading
+                            ? <><CircularProgress size={14} sx={{ color: 'currentColor' }} /> Saving...</>
+                            : <><span className="material-symbols-outlined text-sm">save</span> Save</>
+                        }
+                    </button>
+                </DialogActions>
+            </Dialog>
+        </div>
+    );
 };
 
 export default CheckoutPage;

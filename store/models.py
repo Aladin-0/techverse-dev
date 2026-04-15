@@ -4,6 +4,27 @@ from django.db import models
 from django.conf import settings # To get the CustomUser model
 from decimal import Decimal
 
+
+class StoreBanner(models.Model):
+    """Hero banners for the Store page — admin-managed, image-only slides."""
+    image = models.ImageField(upload_to='banners/', help_text="Banner image (recommended 1400×400)")
+    button_text = models.CharField(max_length=50, blank=True, help_text="CTA button label, e.g. 'Shop Now'. Leave blank for no button.")
+    product = models.ForeignKey(
+        'Product', on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="Link button to this product page (optional)"
+    )
+    external_link = models.URLField(max_length=500, blank=True, help_text="External URL if no product is linked (optional)")
+    order = models.PositiveIntegerField(default=0, help_text="Display order (lower = first)")
+    is_active = models.BooleanField(default=True, help_text="Show this banner on the store")
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Store Banner'
+        verbose_name_plural = 'Store Banners'
+
+    def __str__(self):
+        return f"Banner #{self.order} ({'active' if self.is_active else 'hidden'})"
+
 class Address(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     street_address = models.CharField(max_length=255)
@@ -30,12 +51,11 @@ class ProductCategory(models.Model):
 
 class Product(models.Model):
     category = models.ForeignKey(ProductCategory, related_name='products', on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True, help_text="A unique, URL-friendly name for the product.")
-    description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='products/', help_text="Main product image")  # Main image
-    stock = models.PositiveIntegerField(default=0)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, help_text="A unique, URL-friendly name for the product.")
+    description = models.TextField(blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    image = models.ImageField(upload_to='products/', blank=True, null=True, help_text="Main product image")  # Main image
     delivery_time_info = models.CharField(max_length=255, help_text="e.g., 'Delivered within 2-3 business days'")
     
     # New fields for enhanced product details
@@ -51,15 +71,47 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False, help_text="Mark as featured product")
     is_active = models.BooleanField(default=True, help_text="Product is active and visible")
     
+    # Amazon Affiliate Feature
+    is_amazon_affiliate = models.BooleanField(default=False, help_text="Is this an Amazon affiliate product?")
+    amazon_affiliate_link = models.URLField(max_length=1000, blank=True, null=True, help_text="Amazon Affiliate Link")
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['is_amazon_affiliate', '-created_at']
 
     def __str__(self):
         return self.name
+        
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        # Provide default slug if empty to avoid DB errors on initial save
+        if not self.slug and self.name:
+            from django.utils.text import slugify
+            import uuid
+            self.slug = f"{slugify(self.name)[:200]}-{uuid.uuid4().hex[:6]}"
+            
+        super().save(*args, **kwargs)
+        
+        # If it's an amazon affiliate and missing name/price/image, try fetching it
+        if self.is_amazon_affiliate and self.amazon_affiliate_link:
+            from decimal import Decimal
+            needs_fetch = not self.name or not self.price or self.price == Decimal('0.00') or not self.image
+            
+            # Prevent infinite recursion via a custom flag
+            if needs_fetch and not getattr(self, '_fetching_amazon', False):
+                self._fetching_amazon = True
+                try:
+                    from services.amazon_scraper import populate_product_from_amazon
+                    populate_product_from_amazon(self)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Amazon scraping failed for Product {self.id}: {e}")
+                finally:
+                    self._fetching_amazon = False
     
     def get_features_list(self):
         """Return features as a list"""
@@ -161,8 +213,22 @@ class Order(models.Model):
     # MAKE SURE THIS FIELD EXISTS
     technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_orders', limit_choices_to={'role': 'TECHNICIAN'})
     order_date = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when order was marked as Delivered")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     shipping_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True)
+    affiliate = models.ForeignKey('affiliates.Affiliate', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+
+    def save(self, *args, **kwargs):
+        """Auto-stamp delivered_at when status transitions to DELIVERED."""
+        if self.pk:
+            try:
+                old = Order.objects.get(pk=self.pk)
+                if old.status != 'DELIVERED' and self.status == 'DELIVERED' and not self.delivered_at:
+                    from django.utils import timezone
+                    self.delivered_at = timezone.now()
+            except Order.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Order #{self.id} by {self.customer.name if self.customer else 'Guest'}"
@@ -178,7 +244,7 @@ class Order(models.Model):
                     total += item_total
             return total
         except Exception as e:
-            print(f"Error calculating total amount for order {self.id}: {e}")
+
             return Decimal('0.00')
 
 class OrderItem(models.Model):
@@ -202,17 +268,17 @@ class OrderItem(models.Model):
                     self.price = item_price
                     self.save(update_fields=['price'])
                 else:
-                    print(f"Warning: No price found for OrderItem {self.id} (Product: {self.product})")
+
                     return Decimal('0.00')
             
             if self.quantity and item_price:
                 return Decimal(str(self.quantity)) * Decimal(str(item_price))
             else:
-                print(f"Warning: Invalid quantity ({self.quantity}) or price ({item_price}) for OrderItem {self.id}")
+
                 return Decimal('0.00')
                 
         except Exception as e:
-            print(f"Error calculating total for OrderItem {self.id}: {e}")
+
             return Decimal('0.00')
     
     def save(self, *args, **kwargs):

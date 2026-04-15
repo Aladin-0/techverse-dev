@@ -26,13 +26,13 @@ export const useRating = (): UseRatingResult => {
     setError(null);
 
     try {
-      console.log('Submitting rating with data:', data);
-      
+
+
       // Try the correct endpoint path
-      const response = await apiClient.post('/services/api/ratings/create/', data);
-      
-      console.log('Rating submission response:', response);
-      
+      const response = await apiClient.post('/api/ratings/create/', data);
+
+
+
       if (response.status === 201) {
         enqueueSnackbar('Rating submitted successfully!', { variant: 'success' });
         return true;
@@ -40,12 +40,12 @@ export const useRating = (): UseRatingResult => {
         throw new Error('Unexpected response status: ' + response.status);
       }
     } catch (err: any) {
-      console.error('Rating submission error:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
-      
+
+
+
+
       let errorMessage = 'Failed to submit rating';
-      
+
       if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err.response?.data?.message) {
@@ -59,7 +59,7 @@ export const useRating = (): UseRatingResult => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       enqueueSnackbar(errorMessage, { variant: 'error' });
       return false;

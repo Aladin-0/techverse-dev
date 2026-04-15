@@ -14,7 +14,8 @@ urlpatterns = [
     path('update-service-status/<int:request_id>/', views.update_service_status, name='update_service_status'),
     
     # API endpoints
-    path('api/categories/', views.ServiceCategoryListAPIView.as_view(), name='api_service_category_list'),
+    path('api/service-categories/', views.ServiceCategoryListAPIView.as_view(), name='api_service_category_list'),
+    path('api/trending-services/', views.TrendingServiceCategoriesAPIView.as_view(), name='api_trending_services'),
     path('api/requests/create/', views.ServiceRequestCreateAPIView.as_view(), name='api_service_request_create'),
     path('api/requests/history/', views.ServiceRequestHistoryAPIView.as_view(), name='api_service_request_history'),
     

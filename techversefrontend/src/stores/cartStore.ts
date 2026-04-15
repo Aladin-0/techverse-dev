@@ -11,6 +11,8 @@ interface Product {
   category: {
     name: string;
   };
+  is_amazon_affiliate?: boolean;
+  amazon_affiliate_link?: string;
 }
 
 interface CartItem {
@@ -46,7 +48,7 @@ export const useCartStore = create<CartState>()(
 
         // If switching to a different user, clear current cart and load user's cart
         if (state.currentUserId !== userId) {
-          console.log('Switching cart user from', state.currentUserId, 'to', userId);
+
 
           // Get the stored cart data for this user
           const storedData = localStorage.getItem('cart-storage');
@@ -179,7 +181,7 @@ export const useCartStore = create<CartState>()(
       onRehydrateStorage: () => (state) => {
         // When rehydrating, restore items for current user or guest
         try {
-          console.log('Rehydrating cart storage');
+
           if (!state) return;
 
           const raw = localStorage.getItem('cart-storage');

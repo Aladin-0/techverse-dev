@@ -51,7 +51,7 @@ const DashboardContent = styled(Box)({
   '@media (min-width: 900px)': {
     padding: '40px',
   },
-  background: `linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #000000 100%)`,
+  background: `linear-gradient(135deg, #0C0B09 0%, #0E0D0B 25%, #131210 50%, #0E0D0B 75%, #0C0B09 100%)`,
   position: 'relative',
 });
 
@@ -256,7 +256,7 @@ export const TechnicianDashboard: React.FC = () => {
   const handleUpdateStatus = async (type: 'order' | 'service', id: number) => {
     const url = type === 'order'
       ? `/api/technician/complete-order/${id}/`
-      : `/services/api/service-requests/${id}/complete/`;
+      : `/api/service-requests/${id}/complete/`;
     const successMessage = type === 'order' ? 'Order marked as delivered!' : 'Service marked as completed!';
     const errorMessage = type === 'order' ? 'Failed to complete order' : 'Failed to complete service';
 
