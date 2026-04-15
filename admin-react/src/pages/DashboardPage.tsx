@@ -35,6 +35,7 @@ interface AnalyticsSnapshot {
   monthly_revenue: MonthlyRevenuePoint[];
   total_revenue: number;
   total_orders: number;
+  daily?: any[];
 }
 
 /* ── Color Palette (rich, warm dark) ───────────────────────────────── */
